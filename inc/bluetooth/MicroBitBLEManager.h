@@ -57,6 +57,7 @@ DEALINGS IN THE SOFTWARE.
 #include "MicroBitButtonService.h"
 #include "MicroBitIOPinService.h"
 #include "MicroBitTemperatureService.h"
+#include "MicroBitPartialFlashingService.h"
 #include "ExternalEvents.h"
 #include "MicroBitButton.h"
 #include "MicroBitStorage.h"
@@ -288,6 +289,14 @@ class MicroBitBLEManager : MicroBitComponent
     * @param display The display instance used for displaying the histogram.
 	*/
     void showNameHistogram(MicroBitDisplay &display);
+        
+
+    /**
+    * Displays pairing mode animation
+    *
+    * @param display The display instance used for displaying the histogram.
+    */
+    void showManagementModeAnimation(MicroBitDisplay &display);    
 
     #define MICROBIT_BLE_DISCONNECT_AFTER_PAIRING_DELAY  500
     unsigned long pairing_completed_at_time;   

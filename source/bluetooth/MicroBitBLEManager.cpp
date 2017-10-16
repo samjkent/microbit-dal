@@ -384,7 +384,8 @@ void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumb
 #if CONFIG_ENABLED(MICROBIT_BLE_DFU_SERVICE)
     new MicroBitDFUService(*ble);
 #endif
-
+  
+ 
 #if CONFIG_ENABLED(MICROBIT_BLE_DEVICE_INFORMATION_SERVICE)
     DeviceInformationService ble_device_information_service(*ble, MICROBIT_BLE_MANUFACTURER, MICROBIT_BLE_MODEL, serialNumber.toCharArray(), MICROBIT_BLE_HARDWARE_VERSION, MICROBIT_BLE_FIRMWARE_VERSION, MICROBIT_BLE_SOFTWARE_VERSION);
 #else
@@ -629,6 +630,7 @@ int MicroBitBLEManager::advertiseEddystoneUid(const char* uid_namespace, const c
  *
  * @param display An instance of MicroBitDisplay used when displaying pairing information.
  * @param authorizationButton The button to use to authorise a pairing request.
+ * @param mMap Memory Map to use for partial flashing
  *
  * @code
  * // initiate pairing mode
@@ -641,7 +643,7 @@ void MicroBitBLEManager::pairingMode(MicroBitDisplay &display, MicroBitButton &a
     ManagedString namePostfix("]");
     ManagedString BLEName = namePrefix + deviceName + namePostfix;
 
-    ManagedString msg("PAIRING MODE!");
+    ManagedString msg("M M!");
 
     int timeInPairingMode = 0;
     int brightness = 255;
@@ -673,7 +675,11 @@ void MicroBitBLEManager::pairingMode(MicroBitDisplay &display, MicroBitButton &a
 
     // Stop any running animations on the display
     display.stopAnimation();
-    display.scroll(msg);
+    
+    // Replaced by animation TODO remove
+    //display.scroll(msg);
+
+    showManagementModeAnimation(display);
 
     // Display our name, visualised as a histogram in the display to aid identification.
     showNameHistogram(display);
@@ -763,6 +769,50 @@ void MicroBitBLEManager::pairingMode(MicroBitDisplay &display, MicroBitButton &a
         if (timeInPairingMode >= MICROBIT_BLE_PAIRING_TIMEOUT * 30)
             microbit_reset();
     }
+}
+
+/**
+ * Displays the management mode animation on the provided MicroBitDisplay instance.
+ *
+ * @param display The Display instance used for displaying the animation.
+ */
+void MicroBitBLEManager::showManagementModeAnimation(MicroBitDisplay &display)
+{
+    // Animation for display object
+    // https://makecode.microbit.org/93264-81126-90471-58367
+
+    const int mgmt_animation_w = 60;
+    const int mgmt_animation_h = 5;
+    const uint8_t mgmt_animation[] = 
+    {
+         1,0,0,0,0, 1,1,0,0,0, 1,1,1,0,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,0,1,1, 1,0,0,0,1,
+         0,0,0,0,0, 1,0,0,0,0, 1,1,0,0,0, 1,1,1,0,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,0,1,1, 1,0,0,0,1, 0,0,0,0,0,
+         0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,1, 1,1,0,1,1, 1,1,1,1,1, 1,1,0,1,1, 1,1,1,1,1, 1,1,0,1,1, 1,1,1,1,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0,
+         0,0,0,0,0, 0,0,0,0,1, 0,0,0,1,1, 1,0,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,0,1,1, 1,0,0,0,1, 0,0,0,0,0,
+         0,0,0,0,1, 0,0,0,1,1, 0,0,1,1,1, 0,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,0,1,1, 1,0,0,0,1
+    };
+  
+    MicroBitImage mgmt(mgmt_animation_w,mgmt_animation_h,mgmt_animation);
+    display.animate(mgmt,100,5);
+    
+    const uint8_t bt_icon_raw[] =
+    {
+        255,255,255,0  ,255,
+        255,0  ,255,255,0  ,
+        255,255,255,0  ,0  ,
+        255,0  ,255,255,0  ,
+        255,255,255,0  ,255 
+    };
+    
+    MicroBitImage bt_icon(5,5,bt_icon_raw);
+    display.print(bt_icon,0,0,0,0);
+    
+    for(int i=0; i < 255; i++){
+        display.setBrightness(i);
+        fiber_sleep(5);
+    }
+    fiber_sleep(1000);
+
 }
 
 /**
