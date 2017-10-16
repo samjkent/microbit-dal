@@ -61,6 +61,7 @@ DEALINGS IN THE SOFTWARE.
 #include "ExternalEvents.h"
 #include "MicroBitButton.h"
 #include "MicroBitStorage.h"
+#include "MicroBitMemoryMap.h"
 
 #define MICROBIT_BLE_PAIR_REQUEST 0x01
 #define MICROBIT_BLE_PAIR_COMPLETE 0x02
@@ -144,13 +145,14 @@ class MicroBitBLEManager : MicroBitComponent
       * @param deviceName The name used when advertising
       * @param serialNumber The serial number exposed by the device information service
       * @param messageBus An instance of an EventModel, used during pairing.
+      * @param mMap Pointer to the Memory Map
       * @param enableBonding If true, the security manager enabled bonding.
       *
       * @code
-      * bleManager.init(uBit.getName(), uBit.getSerial(), uBit.messageBus, true);
+      * bleManager.init(uBit.getName(), uBit.getSerial(), uBit.messageBus, &uBit.mMap, true);
       * @endcode
       */
-    void init(ManagedString deviceName, ManagedString serialNumber, EventModel &messageBus, bool enableBonding);
+    void init(ManagedString deviceName, ManagedString serialNumber, EventModel &messageBus, MicroBitMemoryMap &mMap, bool enableBonding);
 
     /**
      * Change the output power level of the transmitter to the given value.

@@ -294,7 +294,7 @@ void MicroBitBLEManager::deferredSysAttrWrite(Gap::Handle_t handle)
   * bleManager.init(uBit.getName(), uBit.getSerial(), uBit.messageBus, true);
   * @endcode
   */
-void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumber, EventModel &messageBus, bool enableBonding)
+void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumber, EventModel &messageBus, MicroBitMemoryMap &mMap, bool enableBonding)
 {
     ManagedString BLEName("BBC micro:bit");
     this->deviceName = deviceName;
@@ -383,6 +383,7 @@ void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumb
 // Bring up core BLE services.
 #if CONFIG_ENABLED(MICROBIT_BLE_DFU_SERVICE)
     new MicroBitDFUService(*ble);
+    new MicroBitPartialFlashService(*ble, mMap);
 #endif
   
  
