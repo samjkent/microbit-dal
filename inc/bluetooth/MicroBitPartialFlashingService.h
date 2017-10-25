@@ -30,6 +30,10 @@ DEALINGS IN THE SOFTWARE.
 #include "ble/BLE.h"
 #include "MicroBitMemoryMap.h"
 
+#include "MicroBitFlash.h"
+
+#include "MicroBitFiber.h"
+
 // UUIDs for our service and characteristics
 extern const uint8_t  MicroBitPartialFlashServiceUUID[];
 extern const uint8_t  MicroBitPartialFlashServiceMapUUID[];
@@ -64,9 +68,18 @@ class MicroBitPartialFlashService
 
     private:
 
+    /**
+      * Write thread
+      */
+    static void writeThread(); 
+    static uint8_t writeStatus;
+
     // Bluetooth stack we're running on.
     BLEDevice           &ble;
-    MicroBitMemoryMap     &memoryMap;
+    MicroBitMemoryMap   &memoryMap;
+
+    // Tranfer started flag
+    uint8_t writeThreadFlag = 0;
 
     // memory for our control characteristics.
     uint8_t             mapCharacteristicBuffer[20];

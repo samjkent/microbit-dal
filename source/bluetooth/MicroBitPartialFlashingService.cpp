@@ -32,6 +32,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "MicroBitPartialFlashingService.h"
 
+uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
 
 /**
   * Constructor.
@@ -86,7 +87,34 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
             
     } else if(params->handle == flashCharacteristicHandle && params->len > 0){
         
+        // If a transfer is starting fire up a new write thread
+        create_fiber(writeThread);
     }
+
+}
+
+/**
+  * Write thread
+  * Used the write data to the flash outside of the BLE ISR
+  */
+void MicroBitPartialFlashService::writeThread(void){
+    
+    MicroBitFlash flash;     
+    uint32_t *flashPointer = (uint32_t *)0x0000; //(uint32__dd_idle_component *)(pg_size * (NRF_FICR->CODESIZE - 19));
+    /*
+    uint32_t a[100];
+    for(int i = 0; i < 100; i++)
+        a[i] = 0xFFFFFFFF;
+
+    //calculate our various offsets
+    uint32_t *s = (uint32_t *) a;
+    uint32_t pg_size = NRF_FICR->CODEPAGESIZE;
+    uint32_t *flashPointer = (uint32__dd_idle_component *)(pg_size * (NRF_FICR->CODESIZE - 19));
+   
+    writeStatus = flash.flash_write(flashPointer, s, sizeof(*a));
+    */
+
+    flash.erase_page(flashPointer); 
 
 }
 
@@ -128,7 +156,8 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
     if(params->handle == flashCharacteristicHandle)
     {   // Writes Region
         // memcpy(regionCharacteristicBuffer, &memoryMap.memoryMapStore.memoryMap[ROI], sizeof(memoryMap.memoryMapStore.memoryMap[*data]));
-        ble.gattServer().write(flashCharacteristicHandle, (const uint8_t *)&memoryMap.memoryMapStore.memoryMap[0], sizeof(&memoryMap.memoryMapStore.memoryMap[0]));
+        flashCharacteristicBuffer[0] = writeStatus;
+        ble.gattServer().write(flashCharacteristicHandle, (const uint8_t *)flashCharacteristicBuffer, sizeof(flashCharacteristicBuffer));
     } 
 }
 }
