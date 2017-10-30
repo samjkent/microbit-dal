@@ -33,6 +33,8 @@ DEALINGS IN THE SOFTWARE.
 #include "MicroBitPartialFlashingService.h"
 
 uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
+uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
+uint32_t MicroBitPartialFlashService::offset = 0;
 
 /**
   * Constructor.
@@ -40,8 +42,8 @@ uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
   * @param _ble The instance of a BLE device that we're running on.
   * @param _memoryMap An instance of MicroBitMemoryMap to interface with.
   */
-MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroBitMemoryMap &_memoryMap) :
-        ble(_ble), memoryMap(_memoryMap),
+MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroBitMemoryMap &_memoryMap, EventModel &_messageBus) :
+        ble(_ble), memoryMap(_memoryMap), messageBus(_messageBus),
     mapCharacteristic(MicroBitPartialFlashServiceMapUUID, (uint8_t *)&mapCharacteristicBuffer, 0, sizeof(mapCharacteristicBuffer),
         GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_WRITE | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ),
     flashCharacteristic(MicroBitPartialFlashServiceFlashUUID, (uint8_t *) flashCharacteristicBuffer, 0,
@@ -64,10 +66,17 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
 
     ble.addService(service);
 
+    mapCharacteristicBuffer[0] = 0x00;
+    flashCharacteristicBuffer[0] = 0x00;
+
     mapCharacteristicHandle = mapCharacteristic.getValueHandle();
     flashCharacteristicHandle = flashCharacteristic.getValueHandle();
 
     ble.onDataWritten(this, &MicroBitPartialFlashService::onDataWritten);
+
+    // Set up listener for SD writing
+    messageBus.listen(MICROBIT_ID_PFLASH_NOTIFICATION, MICROBIT_EVT_ANY, writeEvent);
+
 }
 
 
@@ -76,7 +85,7 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
   */
 void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *params)
 {
-    uint8_t *data = (uint8_t *)params->data;
+    data = (uint8_t *)params->data;
     
     if(params->handle == mapCharacteristicHandle && params->len > 0 && params->len < 6)
     {
@@ -87,35 +96,31 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
             
     } else if(params->handle == flashCharacteristicHandle && params->len > 0){
         
-        // If a transfer is starting fire up a new write thread
-        create_fiber(writeThread);
+        // Use event model
+        MicroBitEvent evt(MICROBIT_ID_PFLASH_NOTIFICATION, params->len ,CREATE_AND_FIRE);
+
+        flashCharacteristicBuffer[1] = 0x0F; // Indicates received
     }
 
 }
 
 /**
-  * Write thread
+  * Write Event 
   * Used the write data to the flash outside of the BLE ISR
   */
-void MicroBitPartialFlashService::writeThread(void){
-    
+void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
+
     MicroBitFlash flash;     
-    uint32_t *flashPointer = (uint32_t *)0x0000; //(uint32__dd_idle_component *)(pg_size * (NRF_FICR->CODESIZE - 19));
-    /*
-    uint32_t a[100];
-    for(int i = 0; i < 100; i++)
-        a[i] = 0xFFFFFFFF;
+    uint32_t *scratchPointer = (uint32_t *)(NRF_FICR->CODEPAGESIZE * (NRF_FICR->CODESIZE - 19));
+    uint32_t *flashPointer   = (uint32_t *)(NRF_FICR->CODEPAGESIZE * ((FLASH_PROGRAM_END / NRF_FICR->CODEPAGESIZE)));// (uint32_t *)memoryMap.memoryMapStore.memoryMap[2].startAddress;
+    uint32_t len = (uint32_t)e.source;  
 
     //calculate our various offsets
-    uint32_t *s = (uint32_t *) a;
-    uint32_t pg_size = NRF_FICR->CODEPAGESIZE;
-    uint32_t *flashPointer = (uint32__dd_idle_component *)(pg_size * (NRF_FICR->CODESIZE - 19));
-   
-    writeStatus = flash.flash_write(flashPointer, s, sizeof(*a));
-    */
+    flash.flash_write(flashPointer + offset, data, len , scratchPointer);
 
-    flash.erase_page(flashPointer); 
+    offset = offset + len; // Next position in flash to write
 
+    writeStatus = 0xFF; // Indicates flash write complete
 }
 
 /**
@@ -139,16 +144,28 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
        
         } else {
             // Return Region
-            mapCharacteristicBuffer[0] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress & 0xFF00) >> 4;
-            mapCharacteristicBuffer[1] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress & 0x00FF);
-            
-            mapCharacteristicBuffer[2] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress & 0xFF00) >> 4;
-            mapCharacteristicBuffer[3] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress & 0x00FF);
+            /*
+             * mapCharacteristicBuffer[0] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x000000FF);
+            mapCharacteristicBuffer[1] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x0000FF00) >>  8;
+            mapCharacteristicBuffer[2] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x00FF0000) >> 16;
+            mapCharacteristicBuffer[3] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0xFF000000) >> 24;
 
-            for(int i = 0; i < 16; i++)
-                mapCharacteristicBuffer[4+i] = memoryMap.memoryMapStore.memoryMap[ROI].hash[i];
+            mapCharacteristicBuffer[4] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0x000000FF);
+            mapCharacteristicBuffer[5] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0x0000FF00) >>  8;
+            mapCharacteristicBuffer[6] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0x00FF0000) >> 16;
+            mapCharacteristicBuffer[7] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0xFF000000) >> 24;
+            */
 
-            ble.gattServer().write(mapCharacteristicHandle, (const uint8_t *)&mapCharacteristicBuffer, 20);
+           
+            mapCharacteristicBuffer[0] = ROI;
+
+            /*for(int i = 0; i < 16; ++i)
+             *
+             */
+                // mapCharacteristicBuffer[2] |= memoryMap.memoryMapStore.memoryMap[ROI].hash;
+                //mapCharacteristicBuffer[4+i] = memoryMap.memoryMapStore.memoryMap[ROI].hash[i];*/
+
+            ble.gattServer().write(mapCharacteristicHandle, (const uint8_t *)&mapCharacteristicBuffer, sizeof(mapCharacteristicBuffer));
         }
         
     } else 

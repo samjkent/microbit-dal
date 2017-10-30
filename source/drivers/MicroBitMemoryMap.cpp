@@ -62,18 +62,18 @@ MicroBitMemoryMap::MicroBitMemoryMap()
         
         // SD
         char sdName[4] = "SD ";
-        getHash(0x0, 0x8840, hash); // Soft Device Hash
-        pushRegion(Region(0x00, 0x8840, sdName, hash, USB));  // Soft Device
+        //getHash(0x0, 0x8840, hash); // Soft Device Hash
+        pushRegion(Region(0x00, MICROBIT_SD_LIMIT, sdName, hash, USB));  // Soft Device
         
         // DAL
         char dalName[4] = "DAL";
         //getHash(0x0, 34880, hash); // DAL Hash
-        pushRegion(Region(0x10, FLASH_PROGRAM_END, dalName, hash, USB)); // micro:bit Device Abstractation Layer
+        pushRegion(Region(MICROBIT_SD_LIMIT, FLASH_PROGRAM_END, dalName, hash, USB)); // micro:bit Device Abstractation Layer
         
         // PXT
         char pxtName[4] = "PXT";
         //getHash(0x0, 34880, hash); // PXT Hash
-        pushRegion(Region(FLASH_PROGRAM_END + 1, 0x5AFE, pxtName, hash, USB)); // micro:bit PXT
+        pushRegion(Region(FLASH_PROGRAM_END, 0x00, pxtName, hash, USB)); // micro:bit PXT
         
     
         memoryMapStore.magic = MICROBIT_MEMORY_MAP_MAGIC;

@@ -32,7 +32,10 @@ DEALINGS IN THE SOFTWARE.
 
 #include "MicroBitFlash.h"
 
-#include "MicroBitFiber.h"
+#include "MicroBitComponent.h"
+#include "MicroBitEvent.h"
+#include "MicroBitListener.h"
+#include "EventModel.h"
 
 // UUIDs for our service and characteristics
 extern const uint8_t  MicroBitPartialFlashServiceUUID[];
@@ -54,7 +57,7 @@ class MicroBitPartialFlashService
       * @param _ble The instance of a BLE device that we're running on.
       * @param _memoryMap An instance of MicroBiteMemoryMap to interface with.
       */
-    MicroBitPartialFlashService(BLEDevice &_ble, MicroBitMemoryMap &_memoryMap);
+    MicroBitPartialFlashService(BLEDevice &_ble, MicroBitMemoryMap &_memoryMap, EventModel &_messageBus);
 
     /**
       * Callback. Invoked when any of our attributes are written via BLE.
@@ -68,22 +71,23 @@ class MicroBitPartialFlashService
 
     private:
 
-    /**
-      * Write thread
-      */
-    static void writeThread(); 
-    static uint8_t writeStatus;
 
     // Bluetooth stack we're running on.
     BLEDevice           &ble;
     MicroBitMemoryMap   &memoryMap;
+    static uint8_t *data;    
+    static uint32_t offset;
 
-    // Tranfer started flag
+    EventModel          &messageBus;
+
+    // Flash Writing
+    static void writeEvent(MicroBitEvent e);
+    static uint8_t writeStatus;
     uint8_t writeThreadFlag = 0;
 
     // memory for our control characteristics.
-    uint8_t             mapCharacteristicBuffer[20];
-    uint8_t             flashCharacteristicBuffer[20];
+    uint8_t            mapCharacteristicBuffer[20];
+    uint8_t            flashCharacteristicBuffer[20];
 
     uint8_t             ROI = 0xFF;
 

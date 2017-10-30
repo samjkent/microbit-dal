@@ -43,13 +43,13 @@ enum RWPolicy { EMPTY, PartialFlash, FullFlash, USB };
 
 struct Region 
 {
-    uint16_t startAddress;
-    uint16_t endAddress;
+    uint32_t startAddress;
+    uint32_t endAddress;
     char name[3];
     unsigned char hash[16];
     RWPolicy rwPolicy;
 
-    Region(uint16_t startAddress, uint16_t endAddress, char name[4], char hash[16], RWPolicy rwPolicy)
+    Region(uint32_t startAddress, uint32_t endAddress, char name[4], char hash[16], RWPolicy rwPolicy)
     {
         this->startAddress = startAddress;
         this->endAddress = endAddress;
