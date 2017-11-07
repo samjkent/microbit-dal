@@ -134,7 +134,7 @@ extern uint32_t __etext;
 // For standard S110 builds, this should be word aligned and in the range 0x300 - 0x700.
 // Any unused memory will be automatically reclaimed as HEAP memory if both MICROBIT_HEAP_REUSE_SD and MICROBIT_HEAP_ALLOCATOR are enabled.
 #ifndef MICROBIT_SD_GATT_TABLE_SIZE
-#define MICROBIT_SD_GATT_TABLE_SIZE             0x700
+#define MICROBIT_SD_GATT_TABLE_SIZE             0x400
 #endif
 
 //
@@ -220,7 +220,7 @@ extern uint32_t __etext;
 // Open BLE links are not secure, but commonly used during the development of BLE services
 // Set '1' to disable all secuity
 #ifndef MICROBIT_BLE_OPEN
-#define MICROBIT_BLE_OPEN                       1
+#define MICROBIT_BLE_OPEN                       0
 #endif
 
 // Configure for open BLE operation if so configured

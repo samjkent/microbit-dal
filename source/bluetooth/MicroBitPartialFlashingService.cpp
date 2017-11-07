@@ -115,6 +115,8 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
     uint32_t *flashPointer   = (uint32_t *)(NRF_FICR->CODEPAGESIZE * ((FLASH_PROGRAM_END / NRF_FICR->CODEPAGESIZE)));// (uint32_t *)memoryMap.memoryMapStore.memoryMap[2].startAddress;
     uint32_t len = (uint32_t)e.source;  
 
+    writeStatus = 0x00; // Start flash
+
     //calculate our various offsets
     flash.flash_write(flashPointer + offset, data, len , scratchPointer);
 
