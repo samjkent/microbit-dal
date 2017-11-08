@@ -37,7 +37,7 @@ uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
 uint32_t MicroBitPartialFlashService::offset = 0;
 
 uint32_t *scratchPointer = (uint32_t *)(NRF_FICR->CODEPAGESIZE * (NRF_FICR->CODESIZE - 19));
-uint32_t *flashPointer   = (uint32_t *)(FLASH_PROGRAM_END); // (uint32_t *)memoryMap.memoryMapStore.memoryMap[2].startAddress;
+uint32_t *flashPointer   = (uint32_t *)0x30000; // (uint32_t *)memoryMap.memoryMapStore.memoryMap[2].startAddress;
 
 /**
   * Constructor.
@@ -80,11 +80,6 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
     // Set up listener for SD writing
     messageBus.listen(MICROBIT_ID_PFLASH_NOTIFICATION, MICROBIT_EVT_ANY, writeEvent);
 
-    // Set up flash pointer to magic
-    while(&flashPointer != 0x708E3B92){
-        &flashPointer = &flashPointer + 0x10;
-    } 
-
 }
 
 
@@ -123,10 +118,11 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
 
     writeStatus = 0x00; // Start flash
 
+    // offset
+    offset = data[16] << 4 | data[17];
+
     //calculate our various offsets
     flash.flash_write(flashPointer + offset, data, len , scratchPointer);
-
-    offset = offset + len; // Next position in flash to write
 
     writeStatus = 0xFF; // Indicates flash write complete
 }
