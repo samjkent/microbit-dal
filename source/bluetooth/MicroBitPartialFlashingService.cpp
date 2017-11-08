@@ -34,7 +34,10 @@ DEALINGS IN THE SOFTWARE.
 
 uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
 uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
-uint32_t MicroBitPartialFlashService::offset = 0;
+uint32_t MicroBitPartialFlashService::offset = ;
+
+uint32_t *scratchPointer = (uint32_t *)(NRF_FICR->CODEPAGESIZE * (NRF_FICR->CODESIZE - 19));
+uint32_t *flashPointer   = (uint32_t *)(FLASH_PROGRAM_END);// (uint32_t *)memoryMap.memoryMapStore.memoryMap[2].startAddress;
 
 /**
   * Constructor.
@@ -111,8 +114,6 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
 void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
 
     MicroBitFlash flash;     
-    uint32_t *scratchPointer = (uint32_t *)(NRF_FICR->CODEPAGESIZE * (NRF_FICR->CODESIZE - 19));
-    uint32_t *flashPointer   = (uint32_t *)(NRF_FICR->CODEPAGESIZE * ((FLASH_PROGRAM_END / NRF_FICR->CODEPAGESIZE)));// (uint32_t *)memoryMap.memoryMapStore.memoryMap[2].startAddress;
     uint32_t len = (uint32_t)e.source;  
 
     writeStatus = 0x00; // Start flash
