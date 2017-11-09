@@ -35,9 +35,8 @@ DEALINGS IN THE SOFTWARE.
 uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
 uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
 uint32_t MicroBitPartialFlashService::offset = 0;
+uint32_t MicroBitPartialFlashService::baseAddress = 0;
 
-uint32_t *scratchPointer = (uint32_t *)(NRF_FICR->CODEPAGESIZE * (NRF_FICR->CODESIZE - 19));
-uint32_t *flashPointer   = (uint32_t *)0x30000; // (uint32_t *)memoryMap.memoryMapStore.memoryMap[2].startAddress;
 
 /**
   * Constructor.
@@ -55,7 +54,7 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
     // Create the data structures that represent each of our characteristics in Soft Device.
     //GattCharacteristic  rwPolicyCharacteristic(MicroBitPartialFlashServiceRWPolicyUUID, (uint8_t *) rwPolicyCharacteristicBuffer, 0,
     //sizeof(rwPolicyCharacteristicBuffer), GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_WRITE | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
-   
+
     // Auth Callbacks 
     mapCharacteristic.setReadAuthorizationCallback(this, &MicroBitPartialFlashService::onDataRead);
     flashCharacteristic.setReadAuthorizationCallback(this, &MicroBitPartialFlashService::onDataRead);
@@ -96,9 +95,10 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
                   0x?? Returns Region ?? data   
         */
         ROI = *data;
+        baseAddress = memoryMap.memoryMapStore.memoryMap[ROI].startAddress;
             
     } else if(params->handle == flashCharacteristicHandle && params->len > 0){
-        
+       
         // Use event model
         MicroBitEvent evt(MICROBIT_ID_PFLASH_NOTIFICATION, params->len ,CREATE_AND_FIRE);
 
@@ -113,17 +113,26 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
   */
 void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
 
+    uint32_t *scratchPointer = (uint32_t *)(NRF_FICR->CODEPAGESIZE * (NRF_FICR->CODESIZE - 19));
+    uint32_t *flashPointer   = (uint32_t *) baseAddress; // memoryMap.memoryMapStore.memoryMap[2].startAddress;
+
     MicroBitFlash flash;     
-    uint32_t len = 16;  
+    uint32_t len = 32;  
 
     writeStatus = 0x00; // Start flash
 
     // offset
-    offset = data[16] << 4 | data[17];
+    offset = (data[16] << 8) | data[17];
+    offset = offset / 4;
 
-    //calculate our various offsets
-    flash.flash_write(flashPointer + offset, data, len , scratchPointer);
-
+    for(int i = 0; i < 4; i++){
+        uint8_t block[4];
+        block[3] = data[i*4];
+        block[2] = data[(i*4)+1];
+        block[1] = data[(i*4)+2];
+        block[0] = data[(i*4)+3];
+        flash.flash_write(flashPointer + offset + i, block, sizeof(block), scratchPointer);
+    }
     writeStatus = 0xFF; // Indicates flash write complete
 }
 

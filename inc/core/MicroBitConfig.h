@@ -220,7 +220,7 @@ extern uint32_t __etext;
 // Open BLE links are not secure, but commonly used during the development of BLE services
 // Set '1' to disable all secuity
 #ifndef MICROBIT_BLE_OPEN
-#define MICROBIT_BLE_OPEN                       0
+#define MICROBIT_BLE_OPEN                       1
 #endif
 
 // Configure for open BLE operation if so configured
