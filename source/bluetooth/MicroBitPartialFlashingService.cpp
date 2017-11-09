@@ -35,7 +35,7 @@ DEALINGS IN THE SOFTWARE.
 uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
 uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
 uint32_t MicroBitPartialFlashService::offset = 0;
-uint32_t MicroBitPartialFlashService::baseAddress = 0;
+uint32_t MicroBitPartialFlashService::baseAddress = 0x30000;
 
 
 /**
@@ -95,7 +95,7 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
                   0x?? Returns Region ?? data   
         */
         ROI = *data;
-        baseAddress = memoryMap.memoryMapStore.memoryMap[ROI].startAddress;
+        // baseAddress = memoryMap.memoryMapStore.memoryMap[ROI].startAddress;
             
     } else if(params->handle == flashCharacteristicHandle && params->len > 0){
        
