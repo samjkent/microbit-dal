@@ -145,6 +145,7 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
     {
        if(ROI == 0xFF){ 
             // Returns list of region names
+            /*
             int j = 0; // Counter
             for(int i = 0; i < NUMBER_OF_REGIONS; i++) { 
                 mapCharacteristicBuffer[j  ] = memoryMap.memoryMapStore.memoryMap[i].name[0]; 
@@ -152,7 +153,13 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
                 mapCharacteristicBuffer[j+2] = memoryMap.memoryMapStore.memoryMap[i].name[2];
                 j = j + 3;
             }
-        
+            */
+
+            mapCharacteristicBuffer[0] = 't';
+            mapCharacteristicBuffer[1] = 'e';
+            mapCharacteristicBuffer[2] = 's';
+            mapCharacteristicBuffer[3] = 't';
+
             ble.gattServer().write(mapCharacteristicHandle, (const uint8_t *)&mapCharacteristicBuffer, 3 * NUMBER_OF_REGIONS);
        
         } else {
