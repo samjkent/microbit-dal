@@ -55,6 +55,7 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
     //GattCharacteristic  rwPolicyCharacteristic(MicroBitPartialFlashServiceRWPolicyUUID, (uint8_t *) rwPolicyCharacteristicBuffer, 0,
     //sizeof(rwPolicyCharacteristicBuffer), GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_WRITE | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
 
+
     // Auth Callbacks 
     mapCharacteristic.setReadAuthorizationCallback(this, &MicroBitPartialFlashService::onDataRead);
     flashCharacteristic.setReadAuthorizationCallback(this, &MicroBitPartialFlashService::onDataRead);
@@ -154,11 +155,10 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
             }
 
             ble.gattServer().write(mapCharacteristicHandle, (const uint8_t *)&mapCharacteristicBuffer, 3 * NUMBER_OF_REGIONS);
-       
         } else {
-            // Return Region
             /*
-             * mapCharacteristicBuffer[0] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x000000FF);
+            // Return Region
+            mapCharacteristicBuffer[0] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x000000FF);
             mapCharacteristicBuffer[1] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x0000FF00) >>  8;
             mapCharacteristicBuffer[2] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x00FF0000) >> 16;
             mapCharacteristicBuffer[3] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0xFF000000) >> 24;
@@ -168,7 +168,6 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
             mapCharacteristicBuffer[6] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0x00FF0000) >> 16;
             mapCharacteristicBuffer[7] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0xFF000000) >> 24;
             */
-
            
             mapCharacteristicBuffer[0] = ROI;
 
@@ -176,20 +175,17 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
              *
              */
                 // mapCharacteristicBuffer[2] |= memoryMap.memoryMapStore.memoryMap[ROI].hash;
-                //mapCharacteristicBuffer[4+i] = memoryMap.memoryMapStore.memoryMap[ROI].hash[i];*/
+                //mapCharacteristicBuffer[4+i] = memoryMap.memoryMapStore.memoryMap[ROI].hash[i];
 
             ble.gattServer().write(mapCharacteristicHandle, (const uint8_t *)&mapCharacteristicBuffer, sizeof(mapCharacteristicBuffer));
-        }
-        
+            }
     } else 
-    {
     if(params->handle == flashCharacteristicHandle)
     {   // Writes Region
         // memcpy(regionCharacteristicBuffer, &memoryMap.memoryMapStore.memoryMap[ROI], sizeof(memoryMap.memoryMapStore.memoryMap[*data]));
         flashCharacteristicBuffer[0] = writeStatus;
         ble.gattServer().write(flashCharacteristicHandle, (const uint8_t *)flashCharacteristicBuffer, sizeof(flashCharacteristicBuffer));
     } 
-}
 }
 
 

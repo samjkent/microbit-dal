@@ -378,7 +378,6 @@ void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumb
     // Configure the radio at our default power level
     setTransmitPower(MICROBIT_BLE_DEFAULT_TX_POWER);
 
-    new MicroBitPartialFlashService(*ble, mMap, messageBus);
 
 // Bring up core BLE services.
 #if CONFIG_ENABLED(MICROBIT_BLE_DFU_SERVICE)
@@ -397,6 +396,8 @@ void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumb
 #else
     (void)messageBus;
 #endif
+
+    new MicroBitPartialFlashService(*ble, mMap, messageBus);
 
     // Configure for high speed mode where possible.
     Gap::ConnectionParams_t fast;
