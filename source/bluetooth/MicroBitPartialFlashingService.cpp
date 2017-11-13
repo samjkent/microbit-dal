@@ -35,7 +35,7 @@ DEALINGS IN THE SOFTWARE.
 uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
 uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
 uint32_t MicroBitPartialFlashService::offset = 0;
-uint32_t MicroBitPartialFlashService::baseAddress = 0x30000;
+uint32_t MicroBitPartialFlashService::baseAddress = 0x33200;
 
 int testCount = 0;
 
