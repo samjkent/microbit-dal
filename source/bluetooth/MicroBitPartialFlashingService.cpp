@@ -37,6 +37,7 @@ uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
 uint32_t MicroBitPartialFlashService::offset = 0;
 uint32_t MicroBitPartialFlashService::baseAddress = 0x30000;
 
+int testCount = 0;
 
 /**
   * Constructor.
@@ -128,12 +129,15 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
 
     for(int i = 0; i < 4; i++){
         uint8_t block[4];
-        block[3] = data[i*4];
+        block[3] = data[(i*4)+0];
         block[2] = data[(i*4)+1];
         block[1] = data[(i*4)+2];
         block[0] = data[(i*4)+3];
-        flash.flash_write(flashPointer + offset + i, block, sizeof(block), scratchPointer);
+        flash.flash_write(flashPointer + testCount + i, block, sizeof(block), scratchPointer);
     }
+
+    testCount = testCount+4;
+
     writeStatus = 0xFF; // Indicates flash write complete
 }
 
