@@ -125,6 +125,7 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
 
     // offset
     offset = (data[16] << 8) | data[17];
+    offset = offset/4;
 
     uint32_t block[4];
     for(int x = 0; x < 4; x++)
