@@ -127,7 +127,7 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
     offset = (data[16] << 8) | data[17];
     offset = offset / 4;
 
-    writeStatus = flash.flash_write(flashPointer + offset + i, data, sizeof(data), scratchPointer);
+    writeStatus = flash.flash_write(flashPointer + offset, data, 16, scratchPointer);
 
 }
 
