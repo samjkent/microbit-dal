@@ -125,16 +125,13 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
 
     // offset
     offset = (data[16] << 8) | data[17];
-    offset = offset / 4;
 
-    for(int i = 0; i < 4; i++){
-        uint8_t block[4];
-        block[0] = data[(i*4)+3];
-        block[1] = data[(i*4)+2];
-        block[2] = data[(i*4)+1];
-        block[3] = data[i*4];
-        writeStatus = flash.flash_write(flashPointer + offset + i, block, sizeof(block), scratchPointer);
-    }
+    uint32_t block[4];
+    for(int x = 0; x < 4; x++)
+        block[x] = data[4*x] << 24 | data[(4*x)+1] << 16 | data[(4*x)+2] << 8 | data[(4*x)+3];
+
+    flash.flash_write((uint32_t *)(flashPointer + offset), block, sizeof(block), scratchPointer);
+
 }
 
 /**
