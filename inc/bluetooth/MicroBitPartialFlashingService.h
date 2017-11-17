@@ -76,7 +76,6 @@ class MicroBitPartialFlashService
     BLEDevice           &ble;
     MicroBitMemoryMap   &memoryMap;
     static uint8_t *data;    
-    static uint32_t offset;
     static uint32_t baseAddress;
 
     EventModel          &messageBus;

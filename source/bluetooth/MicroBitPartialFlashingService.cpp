@@ -34,10 +34,9 @@ DEALINGS IN THE SOFTWARE.
 
 uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
 uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
-uint32_t MicroBitPartialFlashService::offset = 0;
 uint32_t MicroBitPartialFlashService::baseAddress = 0x30000;
 
-int testCount = 0;
+int firstRun = 1;
 
 /**
   * Constructor.
@@ -124,15 +123,18 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
     writeStatus = 0x00; // Start flash
 
     // offset
-    offset = (data[16] << 8) | data[17];
-    offset = offset/4;
+    uint32_t offset       = (data[16] << 8) | data[17];
+    uint32_t page_offset  = offset / 4;
 
+    if((offset % 0x400) == 0) flash.erase_page((uint32_t *)(flashPointer + page_offset));
+
+    // Write data
     uint32_t block[4];
     for(int x = 0; x < 4; x++)
         block[x] = data[4*x] << 24 | data[(4*x)+1] << 16 | data[(4*x)+2] << 8 | data[(4*x)+3];
 
-    flash.flash_write((uint32_t *)(flashPointer + offset), block, sizeof(block), scratchPointer);
-
+    flash.flash_write((uint32_t *)(flashPointer + page_offset), &block, sizeof(block));
+    
 }
 
 /**
