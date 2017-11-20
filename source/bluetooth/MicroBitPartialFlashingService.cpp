@@ -112,29 +112,34 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
   * Write Event 
   * Used the write data to the flash outside of the BLE ISR
   */
-void MicroBitPartialFlashService::writeEvent(MicroBitEvent e){
+void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
+{
+    
+    // Instance of MBFlash
+    MicroBitFlash flash;
 
-    uint32_t *scratchPointer = (uint32_t *)(NRF_FICR->CODEPAGESIZE * (NRF_FICR->CODESIZE - 19));
-    uint32_t *flashPointer   = (uint32_t *) baseAddress; // memoryMap.memoryMapStore.memoryMap[2].startAddress;
-
-    MicroBitFlash flash;     
-    uint32_t len = 32;  
-
-    writeStatus = 0x00; // Start flash
-
-    // offset
+    // Calculate Offset
     uint32_t offset       = (data[16] << 8) | data[17];
-    uint32_t page_offset  = offset / 4;
 
-    if((offset % 0x400) == 0) flash.erase_page((uint32_t *)(flashPointer + page_offset));
+    // Flash Pointer
+    uint32_t *flashPointer   = (uint32_t *) (baseAddress + offset); // memoryMap.memo
+
+    // If the pointer is on a page boundary erase the page
+    if(!((uint32_t)flashPointer % 0x400))
+        flash.erase_page(flashPointer);
 
     // Write data
     uint32_t block[4];
     for(int x = 0; x < 4; x++)
         block[x] = data[4*x] << 24 | data[(4*x)+1] << 16 | data[(4*x)+2] << 8 | data[(4*x)+3];
 
-    flash.flash_write((uint32_t *)(flashPointer + page_offset), &block, sizeof(block));
-    
+    // Create a pointer to the data block
+    uint32_t *blockPointer;
+    blockPointer = block;
+
+    // Burn the data to flash
+    flash.flash_burn(flashPointer, blockPointer, 4);
+
 }
 
 /**
