@@ -131,7 +131,7 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
     // Write data
     uint32_t block[4];
     for(int x = 0; x < 4; x++)
-        block[x] = data[4*x] << 24 | data[(4*x)+1] << 16 | data[(4*x)+2] << 8 | data[(4*x)+3];
+        block[x] = data[4*x] | data[(4*x)+1] << 8 | data[(4*x)+2] << 16 | data[(4*x)+3] << 24;
 
     // Create a pointer to the data block
     uint32_t *blockPointer;
