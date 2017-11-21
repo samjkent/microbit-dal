@@ -79,7 +79,6 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
     // Set up listener for SD writing
     messageBus.listen(MICROBIT_ID_PFLASH_NOTIFICATION, MICROBIT_EVT_ANY, writeEvent);
 
-    /*
     // Set up fast BLE
     Gap::ConnectionParams_t fast;
     ble.getPreferredConnectionParams(&fast);
@@ -87,7 +86,6 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
     fast.maxConnectionInterval = 32; // 40 ms
     fast.slaveLatency = 0;
     ble.setPreferredConnectionParams(&fast);
-    */
 }
 
 
