@@ -87,7 +87,7 @@ class MicroBitPartialFlashService
 
     // memory for our control characteristics.
     uint8_t            mapCharacteristicBuffer[20];
-    uint8_t            flashCharacteristicBuffer[200];
+    uint8_t            flashCharacteristicBuffer[20];
 
     uint8_t             ROI = 0xFF;
 
