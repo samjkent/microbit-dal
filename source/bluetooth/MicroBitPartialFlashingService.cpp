@@ -49,12 +49,11 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
     mapCharacteristic(MicroBitPartialFlashServiceMapUUID, (uint8_t *)&mapCharacteristicBuffer, 0, sizeof(mapCharacteristicBuffer),
         GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_WRITE | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ),
     flashCharacteristic(MicroBitPartialFlashServiceFlashUUID, (uint8_t *) flashCharacteristicBuffer, 0,
-        sizeof(flashCharacteristicBuffer), GattCharacteristic::GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_WRITE | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ)
+        sizeof(flashCharacteristicBuffer), GattCharacteristic::GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_WRITE_WITHOUT_RESPONSE | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ)
 {
     // Create the data structures that represent each of our characteristics in Soft Device.
     //GattCharacteristic  rwPolicyCharacteristic(MicroBitPartialFlashServiceRWPolicyUUID, (uint8_t *) rwPolicyCharacteristicBuffer, 0,
     //sizeof(rwPolicyCharacteristicBuffer), GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_WRITE | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
-
 
     // Auth Callbacks 
     mapCharacteristic.setReadAuthorizationCallback(this, &MicroBitPartialFlashService::onDataRead);
@@ -79,6 +78,14 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
 
     // Set up listener for SD writing
     messageBus.listen(MICROBIT_ID_PFLASH_NOTIFICATION, MICROBIT_EVT_ANY, writeEvent);
+
+    // Set up fast BLE
+    Gap::ConnectionParams_t fast;
+    ble.getPreferredConnectionParams(&fast);
+    fast.minConnectionInterval = 16; // 20 ms
+    fast.maxConnectionInterval = 32; // 40 ms
+    fast.slaveLatency = 0;
+    ble.setPreferredConnectionParams(&fast);
 
 }
 
