@@ -82,8 +82,8 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
     // Set up fast BLE
     Gap::ConnectionParams_t fast;
     ble.getPreferredConnectionParams(&fast);
-    fast.minConnectionInterval = 16; // 20 ms
-    fast.maxConnectionInterval = 32; // 40 ms
+    fast.minConnectionInterval = 6;  // 7.5 ms
+    fast.maxConnectionInterval = 16; // 20  ms
     fast.slaveLatency = 0;
     ble.setPreferredConnectionParams(&fast);
 }
