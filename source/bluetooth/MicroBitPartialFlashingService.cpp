@@ -121,30 +121,36 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
 void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
 {
     
+    uint8_t len = e.value;
+
+
     // Instance of MBFlash
     MicroBitFlash flash;
 
-    // Calculate Offset
-    uint32_t offset       = (data[16] << 8) | data[17];
+        // do this len/18 times
+    for(int byteCount = 0; byteCount < len; byteCount = byteCount + 18) {
+        // Calculate Offset
+        uint32_t offset       = (data[byteCount + 16] << 8) | data[byteCount + 17];
 
-    // Flash Pointer
-    uint32_t *flashPointer   = (uint32_t *) (baseAddress + offset); // memoryMap.memo
+        // Flash Pointer
+        uint32_t *flashPointer   = (uint32_t *) (baseAddress + offset); // memoryMap.memo
 
-    // If the pointer is on a page boundary erase the page
-    if(!((uint32_t)flashPointer % 0x400))
-        flash.erase_page(flashPointer);
+        // If the pointer is on a page boundary erase the page
+        if(!((uint32_t)flashPointer % 0x400))
+            flash.erase_page(flashPointer);
 
-    // Write data
-    uint32_t block[4];
-    for(int x = 0; x < 4; x++)
-        block[x] = data[4*x] | data[(4*x)+1] << 8 | data[(4*x)+2] << 16 | data[(4*x)+3] << 24;
+        // Write data
+        uint32_t block[4];
+        for(int x = 0; x < 4; x++)
+            block[x] = data[byteCount + (4*x)] | data[byteCount + (4*x)+1] << 8 | data[byteCount + (4*x)+2] << 16 | data[byteCount + (4*x)+3] << 24;
 
-    // Create a pointer to the data block
-    uint32_t *blockPointer;
-    blockPointer = block;
+        // Create a pointer to the data block
+        uint32_t *blockPointer;
+        blockPointer = block;
 
-    // Burn the data to flash
-    flash.flash_burn(flashPointer, blockPointer, 4);
+        // Burn the data to flash
+        flash.flash_burn(flashPointer, blockPointer, 4);
+    }
 
 }
 
