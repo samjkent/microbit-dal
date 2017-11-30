@@ -36,6 +36,10 @@ DEALINGS IN THE SOFTWARE.
 #include "MicroBitFlash.h"
 #include "md5.h"
 
+char sdHash[16] = "00000000";
+char dalHash[16] = "00000000";
+char pxtHash[16] = "00000000";
+
 /**
   * Default constructor.
   *
@@ -52,28 +56,27 @@ MicroBitMemoryMap::MicroBitMemoryMap()
     {
         
         // Add known details
-        char hash[16];
         // Set Names to Empty rather than garbage so PushRegion works
         for(int i = 0; i < NUMBER_OF_REGIONS; i++) {
             memoryMapStore.memoryMap[i].name[0] = ' ';
             memoryMapStore.memoryMap[i].name[1] = ' ';
             memoryMapStore.memoryMap[i].name[2] = ' ';
         }
+
+        // Find Hashes if PXT Built Program
+        findHashes();
         
         // SD
         char sdName[4] = "SD ";
-        //getHash(0x0, 0x8840, hash); // Soft Device Hash
-        pushRegion(Region(0x00, MICROBIT_SD_LIMIT, sdName, hash, USB));  // Soft Device
+        pushRegion(Region(0x00, 0x18000, sdName, sdHash, USB));  // Soft Device
         
         // DAL
         char dalName[4] = "DAL";
-        //getHash(0x0, 34880, hash); // DAL Hash
-        pushRegion(Region(MICROBIT_SD_LIMIT, FLASH_PROGRAM_END, dalName, hash, USB)); // micro:bit Device Abstractation Layer
+        pushRegion(Region(0x18000, FLASH_PROGRAM_END, dalName, dalHash, USB)); // micro:bit Device Abstractation Layer
         
         // PXT
         char pxtName[4] = "PXT";
-        //getHash(0x0, 34880, hash); // PXT Hash
-        pushRegion(Region(FLASH_PROGRAM_END, 0x00, pxtName, hash, USB)); // micro:bit PXT
+        pushRegion(Region(FLASH_PROGRAM_END, 0x3e800, pxtName, pxtHash, PartialFlash)); // micro:bit PXT
         
     
         memoryMapStore.magic = MICROBIT_MEMORY_MAP_MAGIC;
@@ -209,6 +212,25 @@ void MicroBitMemoryMap::updateFlash(MemoryMapStore store)
     //erase flash, and copy the scratch page over
     flashPageErase((uint32_t *)flashBlockPointer);
     flashCopy((uint32_t *)(pg_size * (NRF_FICR->CODESIZE - MICROBIT_MEMORY_MAP_SCRATCH_PAGE_OFFSET)), flashBlockPointer, pg_size/4);
+}
+
+/*
+ * Function to fetch the hashes from a PXT generated build
+ */
+int MicroBitMemoryMap::findHashes(){
+    uint32_t *magicAddress = (uint32_t *)(FLASH_PROGRAM_END + 0x400);
+    uint32_t magicValue = *magicAddress;
+    // Check for Magic
+    if(magicValue == 0x7D){
+        // Magic found!
+        sdHash[0] = 0xFF;
+        return 1;
+    } else {
+        return 0;
+    }
+
+
+
 }
 
 

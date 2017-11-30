@@ -141,6 +141,7 @@ uint32_t *flashBlockPointer = (uint32_t *)(pg_size * pg_num);
     */
     void getHash(uint32_t* startAddress, unsigned long length, char* hash);
 
+
     public:
 
     MemoryMapStore memoryMapStore;
@@ -171,7 +172,12 @@ uint32_t *flashBlockPointer = (uint32_t *)(pg_size * pg_num);
       */
     int updateRegion(Region region);
 
-
+    /**
+     * Function to fetch hashes from PXT build
+     *
+     * @return int  Boolean result of the search. 1 = Hashes Found; 0 = No Hash Found
+     */
+    int findHashes();
 };
 
 #endif

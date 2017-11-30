@@ -36,7 +36,7 @@ uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
 uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
 uint32_t MicroBitPartialFlashService::baseAddress = 0x30000;
 
-int firstRun = 1;
+int packet = 0;
 
 /**
   * Constructor.
@@ -101,8 +101,8 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
         /* Data : 0xFF Returns list of Region Names
                   0x?? Returns Region ?? data   
         */
-        ROI = *data;
-        // baseAddress = memoryMap.memoryMapStore.memoryMap[ROI].startAddress;
+        ROI = data[0];
+        packet = 0;
             
     } else if(params->handle == flashCharacteristicHandle && params->len > 0){
        
@@ -152,6 +152,9 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
         flash.flash_burn(flashPointer, blockPointer, 4);
     }
 
+    // Set Byte Count
+    packet = 0;
+
 }
 
 /**
@@ -171,28 +174,48 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
                 j = j + 3;
             }
 
+
             ble.gattServer().write(mapCharacteristicHandle, (const uint8_t *)&mapCharacteristicBuffer, 3 * NUMBER_OF_REGIONS);
         } else {
-            /*
-            // Return Region
-            mapCharacteristicBuffer[0] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x000000FF);
-            mapCharacteristicBuffer[1] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x0000FF00) >>  8;
-            mapCharacteristicBuffer[2] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0x00FF0000) >> 16;
-            mapCharacteristicBuffer[3] = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress && 0xFF000000) >> 24;
+            if(packet == 0){
+                // Return Region Start / End
+                mapCharacteristicBuffer[0]  = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress & 0x000000FF);
+                mapCharacteristicBuffer[1]  = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress & 0x0000FF00) >>  8;
+                mapCharacteristicBuffer[2]  = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress & 0x00FF0000) >> 16;
+                mapCharacteristicBuffer[3]  = (memoryMap.memoryMapStore.memoryMap[ROI].startAddress & 0xFF000000) >> 24;
+                mapCharacteristicBuffer[4]  = 0;
+                mapCharacteristicBuffer[5]  = 0;
+                mapCharacteristicBuffer[6]  = 0;
+                mapCharacteristicBuffer[7]  = 0;
+                mapCharacteristicBuffer[8]  = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress & 0x000000FF);
+                mapCharacteristicBuffer[9]  = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress & 0x0000FF00) >>  8;
+                mapCharacteristicBuffer[10] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress & 0x00FF0000) >> 16;
+                mapCharacteristicBuffer[11] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress & 0xFF000000) >> 24;
+                mapCharacteristicBuffer[12] = 0;
+                mapCharacteristicBuffer[13] = 0;
+                mapCharacteristicBuffer[14] = 0;
+                mapCharacteristicBuffer[15] = 0;
+                mapCharacteristicBuffer[16] = 0;
+                mapCharacteristicBuffer[17] = 0;
+                mapCharacteristicBuffer[18] = ROI;
+                mapCharacteristicBuffer[19] = 0;
 
-            mapCharacteristicBuffer[4] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0x000000FF);
-            mapCharacteristicBuffer[5] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0x0000FF00) >>  8;
-            mapCharacteristicBuffer[6] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0x00FF0000) >> 16;
-            mapCharacteristicBuffer[7] = (memoryMap.memoryMapStore.memoryMap[ROI].endAddress && 0xFF000000) >> 24;
-            */
+                // Increment Packet Count
+                packet = 1;
+        
+            } else {
+                // Return Hash
+                for(int i = 0; i < 16; ++i)
+                    mapCharacteristicBuffer[i] = memoryMap.memoryMapStore.memoryMap[ROI].hash[i];
+                mapCharacteristicBuffer[16] = 0;
+                mapCharacteristicBuffer[17] = 0;
+                mapCharacteristicBuffer[18] = ROI;
+                mapCharacteristicBuffer[19] = 1;
+
+                // Set packet count to 0
+                packet = 0;
+            }
            
-            mapCharacteristicBuffer[0] = ROI;
-
-            /*for(int i = 0; i < 16; ++i)
-             *
-             */
-                // mapCharacteristicBuffer[2] |= memoryMap.memoryMapStore.memoryMap[ROI].hash;
-                //mapCharacteristicBuffer[4+i] = memoryMap.memoryMapStore.memoryMap[ROI].hash[i];
 
             ble.gattServer().write(mapCharacteristicHandle, (const uint8_t *)&mapCharacteristicBuffer, sizeof(mapCharacteristicBuffer));
             }
