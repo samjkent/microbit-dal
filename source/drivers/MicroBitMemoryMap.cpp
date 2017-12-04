@@ -221,11 +221,15 @@ void MicroBitMemoryMap::updateFlash(MemoryMapStore store)
  * Function to fetch the hashes from a PXT generated build
  */
 int MicroBitMemoryMap::findHashes(){
+    uint32_t *endAddress = (uint32_t *)(FLASH_PROGRAM_END);
     uint32_t *magicAddress = (uint32_t *)(FLASH_PROGRAM_END + 0x400);
+    uint32_t *hashAddress  = (uint32_t *)(FLASH_PROGRAM_END + 0x410);
     uint32_t magicValue = *magicAddress;
 
     // Copy Hash
     memcpy(sdHash, magicAddress, 16);
+    memcpy(dalHash, hashAddress, 16);
+    memcpy(pxtHash, endAddress, 16);
 
     // Check for Magic
     if(magicValue == 0x7D){
