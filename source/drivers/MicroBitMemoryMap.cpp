@@ -34,11 +34,14 @@ DEALINGS IN THE SOFTWARE.
 #include "MicroBitConfig.h"
 #include "MicroBitMemoryMap.h"
 #include "MicroBitFlash.h"
+#include "ManagedString.h"
 #include "md5.h"
 
 char sdHash[16] = "00000000";
 char dalHash[16] = "00000000";
 char pxtHash[16] = "00000000";
+
+
 
 /**
   * Default constructor.
@@ -220,16 +223,17 @@ void MicroBitMemoryMap::updateFlash(MemoryMapStore store)
 int MicroBitMemoryMap::findHashes(){
     uint32_t *magicAddress = (uint32_t *)(FLASH_PROGRAM_END + 0x400);
     uint32_t magicValue = *magicAddress;
+
+    // Copy Hash
+    memcpy(sdHash, magicAddress, 16);
+
     // Check for Magic
     if(magicValue == 0x7D){
         // Magic found!
-        sdHash[0] = 0xFF;
         return 1;
     } else {
         return 0;
     }
-
-
 
 }
 
