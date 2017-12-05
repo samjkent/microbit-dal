@@ -236,20 +236,23 @@ void MicroBitMemoryMap::findHashes()
         {   
             // Check remaining magic
             if(
-                *(magicAddress + 0x40) == 0xC615A841 &&
-                *(magicAddress + 0x80) == 0xC49866C9 &&
-                *(magicAddress + 0xC0) == 0x75EE5197
+                    1
               )
             {
                 // If the magic has been found use the hashes follow
                 magicAddress = (uint32_t *)(magicAddress + 0x100);
 
-                // memcpy PXT hash from flash to Memory Map
-                memcpy(&dalHash, &magicAddress, 8);
+                for(int j = 0; j < 8; j++)
+                {
+                    dalHash[j] = *magicAddress;
+                    magicAddress = (uint32_t *)(magicAddress + 0x10);
+                }
                 
-                // memcpy PXT hash from flash to Memory Map
-                magicAddress = (uint32_t *)(magicAddress + 0x80);
-                memcpy(&dalHash, &magicAddress, 8);
+                for(int j = 0; j < 8; j++)
+                {
+                    pxtHash[j] = *magicAddress;
+                    magicAddress = (uint32_t *)(magicAddress + 0x10);
+                }
 
                 // Return true
                 return;
