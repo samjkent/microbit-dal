@@ -34,14 +34,11 @@ DEALINGS IN THE SOFTWARE.
 #include "MicroBitConfig.h"
 #include "MicroBitMemoryMap.h"
 #include "MicroBitFlash.h"
-#include "ManagedString.h"
 #include "md5.h"
 
-char sdHash[16] = "00000000";
-char dalHash[16] = "00000000";
-char pxtHash[16] = "00000000";
-
-
+uint8_t sdHash[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint8_t dalHash[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint8_t pxtHash[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 /**
   * Default constructor.
@@ -57,7 +54,6 @@ MicroBitMemoryMap::MicroBitMemoryMap()
     //if we haven't used flash before, we need to configure it
     if(memoryMapStore.magic != MICROBIT_MEMORY_MAP_MAGIC || 1 == 1)
     {
-        
         // Add known details
         // Set Names to Empty rather than garbage so PushRegion works
         for(int i = 0; i < NUMBER_OF_REGIONS; i++) {
@@ -68,6 +64,11 @@ MicroBitMemoryMap::MicroBitMemoryMap()
 
         // Find Hashes if PXT Built Program
         findHashes();
+        /*
+         * uint32_t volatile *magicAddress  = (uint32_t *)0x00;
+        for(int x = 0; x < 256; x++){
+            magicAddress = (uint32_t volatile *)(magicAddress + 0x100);
+        }*/
         
         // SD
         char sdName[4] = "SD ";
@@ -220,23 +221,49 @@ void MicroBitMemoryMap::updateFlash(MemoryMapStore store)
 /*
  * Function to fetch the hashes from a PXT generated build
  */
-int MicroBitMemoryMap::findHashes(){
-    uint32_t *endAddress = (uint32_t *)(FLASH_PROGRAM_END);
-    uint32_t *magicAddress = (uint32_t *)(FLASH_PROGRAM_END + 0x400);
-    uint32_t *hashAddress  = (uint32_t *)(FLASH_PROGRAM_END + 0x410);
+void MicroBitMemoryMap::findHashes()
+{
+    uint32_t volatile *magicAddress  = (uint32_t *)0x400;
     uint32_t magicValue = *magicAddress;
 
-    // Copy Hash
-    memcpy(sdHash, magicAddress, 16);
-    memcpy(dalHash, hashAddress, 16);
-    memcpy(pxtHash, endAddress, 16);
+    // Iterate through pages to find magic
+    for(int x = 0; x < NRF_FICR->CODESIZE - 1; x++)
+    {
 
-    // Check for Magic
-    if(magicValue == 0x7D){
-        // Magic found!
-        return 1;
-    } else {
-        return 0;
+        // Get next value
+        magicValue = *magicAddress;
+
+        // Check for first 32 bits of Magic
+        if(magicValue == 0x708E3B92)
+        {   
+            // Check remaining magic
+            if(
+                *(magicAddress + 0x40) == 0xC615A841 &&
+                *(magicAddress + 0x80) == 0xC49866C9 &&
+                *(magicAddress + 0xC0) == 0x75EE5197
+              )
+            {
+                // If the magic has been found use the hashes follow
+                magicAddress = (uint32_t *)(magicAddress + 0x100);
+
+                // memcpy PXT hash from flash to Memory Map
+                memcpy(&dalHash, &magicAddress, 8);
+                
+                // memcpy PXT hash from flash to Memory Map
+                magicAddress = (uint32_t *)(magicAddress + 0x80);
+                memcpy(&dalHash, &magicAddress, 8);
+
+                // Return true
+                return;
+
+            }
+
+        }
+
+        // Next page
+        magicAddress = (uint32_t *)(magicAddress + 0x100);
+
+
     }
 
 }

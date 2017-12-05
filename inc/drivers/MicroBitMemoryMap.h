@@ -46,10 +46,10 @@ struct Region
     uint32_t startAddress;
     uint32_t endAddress;
     char name[3];
-    unsigned char hash[16];
+    uint8_t hash[16];
     RWPolicy rwPolicy;
 
-    Region(uint32_t startAddress, uint32_t endAddress, char name[4], char hash[16], RWPolicy rwPolicy)
+    Region(uint32_t startAddress, uint32_t endAddress, char name[4], uint8_t hash[16], RWPolicy rwPolicy)
     {
         this->startAddress = startAddress;
         this->endAddress = endAddress;
@@ -177,7 +177,7 @@ uint32_t *flashBlockPointer = (uint32_t *)(pg_size * pg_num);
      *
      * @return int  Boolean result of the search. 1 = Hashes Found; 0 = No Hash Found
      */
-    int findHashes();
+    void findHashes();
 };
 
 #endif
