@@ -223,16 +223,14 @@ void MicroBitMemoryMap::updateFlash(MemoryMapStore store)
  */
 void MicroBitMemoryMap::findHashes()
 {
-    uint32_t volatile *magicAddress  = (uint32_t *)0x400;
-    uint32_t magicValue = *magicAddress;
 
     // Iterate through pages to find magic
     for(int x = 0; x < NRF_FICR->CODESIZE - 1; x++)
     {
 
-        // Get next value
-        magicValue = *magicAddress;
-
+        uint32_t volatile *magicAddress  = (uint32_t *)(0x400 * x);
+        uint32_t magicValue = *magicAddress;
+        
         // Check for first 32 bits of Magic
         if(magicValue == 0x708E3B92)
         {   
@@ -259,10 +257,6 @@ void MicroBitMemoryMap::findHashes()
             }
 
         }
-
-        // Next page
-        magicAddress = (uint32_t *)(magicAddress + 0x100);
-
 
     }
 
