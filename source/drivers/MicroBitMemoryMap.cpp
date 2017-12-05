@@ -232,7 +232,7 @@ void MicroBitMemoryMap::findHashes()
         uint32_t magicValue = *magicAddress;
         
         // Check for first 32 bits of Magic
-        if(magicValue == 0x708E3B92)
+        if(magicValue == 0x923b8e70) 
         {   
             // Check remaining magic
             if(
@@ -253,6 +253,9 @@ void MicroBitMemoryMap::findHashes()
                     pxtHash[j] = *magicAddress;
                     magicAddress = (uint32_t *)(magicAddress + 0x10);
                 }
+
+                // SD HASH 0 = FF to indicated change
+                sdHash[0] = 0xFF;
 
                 // Return true
                 return;
