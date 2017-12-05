@@ -236,24 +236,40 @@ void MicroBitMemoryMap::findHashes()
         {   
             // Check remaining magic
             if(
-                    1
+               *(uint32_t *)(magicAddress + 0x1) == 0x41A815C6 &&
+               *(uint32_t *)(magicAddress + 0x2) == 0xC96698C4 &&
+               *(uint32_t *)(magicAddress + 0x3) == 0x9751EE75
               )
             {
                 // If the magic has been found use the hashes follow
-                magicAddress = (uint32_t *)(magicAddress + 0x100);
+                magicAddress = (uint32_t *)(magicAddress + 0x4);
 
-                for(int j = 0; j < 8; j++)
-                {
-                    dalHash[j] = *magicAddress;
-                    magicAddress = (uint32_t *)(magicAddress + 0x10);
-                }
+                dalHash[0] = (*magicAddress & 0xFF);
+                dalHash[1] = (*magicAddress & 0xFF00)     >>  8;
+                dalHash[2] = (*magicAddress & 0xFF0000)   >> 16;
+                dalHash[3] = (*magicAddress & 0xFF000000) >> 24;
+
+                magicAddress = (uint32_t *)(magicAddress + 0x1);
                 
-                for(int j = 0; j < 8; j++)
-                {
-                    pxtHash[j] = *magicAddress;
-                    magicAddress = (uint32_t *)(magicAddress + 0x10);
-                }
+                dalHash[4] = (*magicAddress & 0xFF);
+                dalHash[5] = (*magicAddress & 0xFF00)     >>  8;
+                dalHash[6] = (*magicAddress & 0xFF0000)   >> 16;
+                dalHash[7] = (*magicAddress & 0xFF000000) >> 24;
+                
+                magicAddress = (uint32_t *)(magicAddress + 0x1);
 
+                pxtHash[0] = (*magicAddress & 0xFF);
+                pxtHash[1] = (*magicAddress & 0xFF00)     >>  8;
+                pxtHash[2] = (*magicAddress & 0xFF0000)   >> 16;
+                pxtHash[3] = (*magicAddress & 0xFF000000) >> 24;
+
+                magicAddress = (uint32_t *)(magicAddress + 0x1);
+                
+                pxtHash[4] = (*magicAddress & 0xFF);
+                pxtHash[5] = (*magicAddress & 0xFF00)     >>  8;
+                pxtHash[6] = (*magicAddress & 0xFF0000)   >> 16;
+                pxtHash[7] = (*magicAddress & 0xFF000000) >> 24;
+                
                 // SD HASH 0 = FF to indicated change
                 sdHash[0] = 0xFF;
 
