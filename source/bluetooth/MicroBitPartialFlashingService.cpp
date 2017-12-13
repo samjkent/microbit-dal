@@ -136,8 +136,12 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
     uint32_t offset       = (data[16] << 8) | data[17];
     packetNum             = (data[18] << 8) | data[19];
 
+    // If dropped packet
     if(packetNum != ++packetCount)
-        while(1);
+    {
+        uint32_t error = 0xdeadbeef;
+        flash.flash_burn((uint32_t *)0x36000, &error, sizeof(error));
+    }
 
     // Flash Pointer
     uint32_t *flashPointer   = (uint32_t *) (baseAddress + offset);
