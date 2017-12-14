@@ -123,6 +123,7 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
   * Write Event 
   * Used the write data to the flash outside of the BLE ISR
   */
+int packetBlock = 0;
 void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
 {
     
@@ -151,16 +152,23 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
         flash.erase_page(flashPointer);
 
     // Write data
-    uint32_t block[4];
+    uint32_t block[16];
     for(int x = 0; x < 4; x++)
-        block[x] = data[(4*x)] | data[(4*x)+1] << 8 | data[(4*x)+2] << 16 | data[(4*x)+3] << 24;
+        block[x] = data[packetBlock+(4*x)] | data[packetBlock+(4*x)+1] << 8 | data[packetBlock+(4*x)+2] << 16 | data[packetBlock+(4*x)+3] << 24;
 
     // Create a pointer to the data block
     uint32_t *blockPointer;
     blockPointer = block;
 
-    // Burn the data to flash
-    flash.flash_burn(flashPointer, blockPointer, 4);
+    // Increment packetBlock
+    packetBlock = packetBlock + 4;
+
+    // Burn the data to flash if block is complete
+    if(packetBlock == 12)
+    {
+        flash.flash_burn(flashPointer, blockPointer, 4);
+        packetBlock = 0;
+    }
 
 }
 
