@@ -168,7 +168,7 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
     // Burn the data to flash if block is complete
     if(packetBlock == 12)
     {
-        flash.flash_burn(flashPointer, blockPointer, 4);
+        flash.flash_burn(flashPointer, blockPointer, 16);
         packetBlock = 0;
     }
 
