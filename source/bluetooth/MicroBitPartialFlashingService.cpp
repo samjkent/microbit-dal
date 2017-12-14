@@ -38,8 +38,8 @@ uint32_t MicroBitPartialFlashService::baseAddress = 0x30000;
 
 int packet = 0;
 
-int packetNum = 0; 
-int packetCount = 0; 
+uint32_t packetNum = 0; 
+uint32_t packetCount = 0; 
 
 /**
   * Constructor.
@@ -142,6 +142,8 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
     {
         uint32_t error = 0xdeadbeef;
         flash.flash_burn((uint32_t *)0x36000, &error, sizeof(error));
+        flash.flash_burn((uint32_t *)0x36010, &packetNum, sizeof(packetNum));
+        flash.flash_burn((uint32_t *)0x36010, &packetCount, sizeof(packetCount));
     }
 
     // Flash Pointer
