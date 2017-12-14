@@ -123,18 +123,16 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
   * Write Event 
   * Used the write data to the flash outside of the BLE ISR
   */
-int packetBlock = 0;
+uint32_t block[16];
+uint32_t offset[4];
+uint8_t  blockPacket = 0;
 void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
 {
-    
-    uint8_t len = e.value;
-
-
     // Instance of MBFlash
     MicroBitFlash flash;
 
     // Calculate Offset
-    uint32_t offset       = (data[16] << 8) | data[17];
+    offset[blockPacket]   = (data[16] << 8) | data[17];
     packetNum             = (data[18] << 8) | data[19];
 
     // If dropped packet
@@ -142,34 +140,32 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
     {
         uint32_t error = 0xdeadbeef;
         flash.flash_burn((uint32_t *)0x36000, &error, sizeof(error));
-        flash.flash_burn((uint32_t *)0x36010, &packetNum, sizeof(packetNum));
-        flash.flash_burn((uint32_t *)0x36010, &packetCount, sizeof(packetCount));
     }
 
     // Flash Pointer
-    uint32_t *flashPointer   = (uint32_t *) (baseAddress + offset);
+    uint32_t *flashPointer   = (uint32_t *) (baseAddress + offset[blockPacket]);
 
     // If the pointer is on a page boundary erase the page
     if(!((uint32_t)flashPointer % 0x400))
         flash.erase_page(flashPointer);
 
     // Write data
-    uint32_t block[16];
     for(int x = 0; x < 4; x++)
-        block[x] = data[packetBlock+(4*x)] | data[packetBlock+(4*x)+1] << 8 | data[packetBlock+(4*x)+2] << 16 | data[packetBlock+(4*x)+3] << 24;
+        block[(4*blockPacket) + x] = data[(4*x)] | data[(4*x)+1] << 8 | data[(4*x)+2] << 16 | data[(4*x)+3] << 24;
 
-    // Create a pointer to the data block
-    uint32_t *blockPointer;
-    blockPointer = block;
+    blockPacket++;
 
-    // Increment packetBlock
-    packetBlock = packetBlock + 4;
+    if(blockPacket == 3 || packetNum == 0xFFFF){
+        // Create a pointer to the data block
+        uint32_t *blockPointer;
+        blockPointer = block;
 
-    // Burn the data to flash if block is complete
-    if(packetBlock == 12)
-    {
+        // Flash pointer
+        flashPointer = (uint32_t *)(baseAddress + offset[0]);
+
         flash.flash_burn(flashPointer, blockPointer, 16);
-        packetBlock = 0;
+
+        blockPacket = 0;
     }
 
 }
