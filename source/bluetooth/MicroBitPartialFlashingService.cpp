@@ -40,6 +40,10 @@ int packet = 0;
 
 uint32_t packetNum = 0; 
 uint32_t packetCount = 0; 
+    
+uint32_t block[16];
+uint8_t  blockNum = 0;
+uint8_t  offset   = 0;
 
 /**
   * Constructor.
@@ -110,11 +114,34 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
         baseAddress = memoryMap.memoryMapStore.memoryMap[ROI].startAddress & 0xFFFF0000; // Offsets are 16 bit
             
     } else if(params->handle == flashCharacteristicHandle && params->len > 0){
-       
-        // Use event model
-        MicroBitEvent evt(MICROBIT_ID_PFLASH_NOTIFICATION, params->len ,CREATE_AND_FIRE);
+        // First packet in block
+        if(blockNum == 0)
+        {    
+            // Calculate Offset
+            offset                = (data[16] << 8) | data[17];
+            packetNum             = (data[18] << 8) | data[19];
+        }
+
+        // Add to block
+        for(int x = 0; x < 4; x++)
+            block[blockNum + x] = data[(4*x)] | data[(4*x)+1] << 8 | data[(4*x)+2] << 16 | data[(4*x)+3] << 24;
+
+        // Check page erase
+        checkPageErase((uint32_t *)(baseAddress + ((data[16] << 8) | data[17])));
+
+        if(blockNum == 3 || (data[16] == 0xFF && data[17] == 0xFF))
+        {
+            // Fire write event
+            // Use event model
+            MicroBitEvent evt(MICROBIT_ID_PFLASH_NOTIFICATION, params->len ,CREATE_AND_FIRE);
+
+            blockNum = 0;
+        }
 
         flashCharacteristicBuffer[1] = 0x0F; // Indicates received
+
+        blockNum++;
+
     }
 
 }
@@ -123,51 +150,30 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
   * Write Event 
   * Used the write data to the flash outside of the BLE ISR
   */
-uint32_t block[16];
-uint32_t offset[4];
-uint8_t  blockPacket = 0;
 void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
 {
     // Instance of MBFlash
     MicroBitFlash flash;
 
-    // Calculate Offset
-    offset[blockPacket]   = (data[16] << 8) | data[17];
-    packetNum             = (data[18] << 8) | data[19];
-
-    // If dropped packet
-    if(packetNum != ++packetCount)
-    {
-        uint32_t error = 0xdeadbeef;
-        flash.flash_burn((uint32_t *)0x36000, &error, sizeof(error));
-    }
-
     // Flash Pointer
-    uint32_t *flashPointer   = (uint32_t *) (baseAddress + offset[blockPacket]);
+    uint32_t *flashPointer   = (uint32_t *) (baseAddress + offset);
 
+    // Create a pointer to the data block
+    uint32_t *blockPointer;
+    blockPointer = block;
+
+    flash.flash_burn(flashPointer, blockPointer, 4);
+
+}
+
+void MicroBitPartialFlashService::checkPageErase(uint32_t *flashPointer)
+{   
     // If the pointer is on a page boundary erase the page
     if(!((uint32_t)flashPointer % 0x400))
+    {
+        MicroBitFlash flash;   
         flash.erase_page(flashPointer);
-
-    // Write data
-    for(int x = 0; x < 4; x++)
-        block[(4*blockPacket) + x] = data[(4*x)] | data[(4*x)+1] << 8 | data[(4*x)+2] << 16 | data[(4*x)+3] << 24;
-
-    blockPacket++;
-
-    if(blockPacket == 3 || packetNum == 0xFFFF){
-        // Create a pointer to the data block
-        uint32_t *blockPointer;
-        blockPointer = block;
-
-        // Flash pointer
-        flashPointer = (uint32_t *)(baseAddress + offset[0]);
-
-        flash.flash_burn(flashPointer, blockPointer, 16);
-
-        blockPacket = 0;
     }
-
 }
 
 /**

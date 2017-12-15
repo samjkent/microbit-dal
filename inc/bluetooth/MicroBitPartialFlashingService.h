@@ -98,6 +98,8 @@ class MicroBitPartialFlashService
     GattCharacteristic mapCharacteristic;
     GattCharacteristic flashCharacteristic;
 
+    void checkPageErase(uint32_t *flashPointer);
+
 };
 
 
