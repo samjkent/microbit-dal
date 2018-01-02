@@ -76,6 +76,7 @@ class MicroBitPartialFlashService
     // Bluetooth stack we're running on.
     BLEDevice           &ble;
     MicroBitMemoryMap   &memoryMap;
+
     static uint8_t *data;    
     static uint32_t baseAddress;
 
@@ -101,7 +102,6 @@ class MicroBitPartialFlashService
     GattCharacteristic mapCharacteristic;
     GattCharacteristic flashCharacteristic;
     GattCharacteristic flashControlCharacteristic;
-
 
 };
 

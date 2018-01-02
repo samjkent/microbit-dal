@@ -206,7 +206,6 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
 
     // Update flash control buffer to send next packet
     flashControlCharacteristicBuffer[0] = 0xFF;
-
 }
 
 
