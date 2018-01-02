@@ -41,6 +41,7 @@ DEALINGS IN THE SOFTWARE.
 extern const uint8_t  MicroBitPartialFlashServiceUUID[];
 extern const uint8_t  MicroBitPartialFlashServiceMapUUID[];
 extern const uint8_t  MicroBitPartialFlashServiceFlashUUID[];
+extern const uint8_t  MicroBitPartialFlashServiceFlashControlUUID[];
 
 
 /**
@@ -88,17 +89,19 @@ class MicroBitPartialFlashService
     // memory for our control characteristics.
     uint8_t            mapCharacteristicBuffer[20];
     uint8_t            flashCharacteristicBuffer[20];
+    static uint8_t            flashControlCharacteristicBuffer[20];
 
     uint8_t             ROI = 0xFF;
 
     // Handles to access each characteristic when they are held by Soft Device.
     GattAttribute::Handle_t mapCharacteristicHandle;
     GattAttribute::Handle_t flashCharacteristicHandle;
+    GattAttribute::Handle_t flashControlCharacteristicHandle;
 
     GattCharacteristic mapCharacteristic;
     GattCharacteristic flashCharacteristic;
+    GattCharacteristic flashControlCharacteristic;
 
-    void checkPageErase(uint32_t *flashPointer);
 
 };
 
