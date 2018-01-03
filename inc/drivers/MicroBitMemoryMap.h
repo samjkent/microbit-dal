@@ -46,15 +46,15 @@ struct Region
     uint32_t startAddress;
     uint32_t endAddress;
     char name[3];
-    uint8_t hash[16];
+    uint8_t hash[8];
     RWPolicy rwPolicy;
 
-    Region(uint32_t startAddress, uint32_t endAddress, char name[4], uint8_t hash[16], RWPolicy rwPolicy)
+    Region(uint32_t startAddress, uint32_t endAddress, char name[4], uint8_t hash[8], RWPolicy rwPolicy)
     {
         this->startAddress = startAddress;
         this->endAddress = endAddress;
         strcpy( this->name, name );
-        memcpy( this->hash, hash, 16 );
+        memcpy( this->hash, hash, 8 );
         this->rwPolicy = rwPolicy;
     }
 
@@ -63,7 +63,7 @@ struct Region
         this->startAddress = 0;
         this->endAddress = 0;
         strcpy( this->name, "" );
-        memcpy( this->hash, "", 16 );
+        memcpy( this->hash, "", 8 );
         this->rwPolicy = EMPTY;
     }
 
@@ -130,18 +130,6 @@ uint32_t *flashBlockPointer = (uint32_t *)(pg_size * pg_num);
     */
     void updateFlash(MemoryMapStore store);
     
-    /**
-    * Function to get the MD5 hash of a region of data
-    * 
-    * @param data A pointer to the start of the block(Region.startAddress)
-    *
-    * @param size The size of the region
-    *
-    * @param hash Pointer to the char array used to store the MD5 hash of the region
-    */
-    void getHash(uint32_t* startAddress, unsigned long length, char* hash);
-
-
     public:
 
     MemoryMapStore memoryMapStore;

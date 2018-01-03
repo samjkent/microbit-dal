@@ -36,9 +36,9 @@ DEALINGS IN THE SOFTWARE.
 #include "MicroBitFlash.h"
 #include "md5.h"
 
-uint8_t sdHash[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-uint8_t dalHash[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-uint8_t pxtHash[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint8_t sdHash[8]  = {0,0,0,0,0,0,0,0};
+uint8_t dalHash[8] = {0,0,0,0,0,0,0,0};
+uint8_t pxtHash[8] = {0,0,0,0,0,0,0,0};
 
 /**
   * Default constructor.
@@ -283,49 +283,3 @@ void MicroBitMemoryMap::findHashes()
     }
 
 }
-
-
-/*
-* Function to get the MD5 hash of a region of data
-*
-* @param data A pointer to the start of the block(Region.startAddress)
-*
-* @param size The size of the region
-*
-* @param hash Pointer to the char array used to store the MD5 hash of the region
-*/
-void MicroBitMemoryMap::getHash(uint32_t* startAddress, unsigned long length, char* hash)
-{
-    
-    MD5_CTX ctx;
-    // Set up MD5
-    MD5_Init(&ctx);
-
-    uint32_t volatile * startAddr = (uint32_t volatile *) startAddress;
-
-    // Iterate through data in chunks
-    uint32_t blockRemaining = length;
-    uint32_t i = 0;
-    uint32_t chunkSize = sizeof(uint8_t);
-    while(blockRemaining > chunkSize){
-        uint32_t volatile * blockPtr = (uint32_t volatile *) (startAddr + (chunkSize * i));
-        MD5_Update(&ctx, &blockPtr, chunkSize);        
-        blockRemaining = blockRemaining - chunkSize;
-        i++;
-    }
-    uint32_t volatile * blockPtr = (uint32_t volatile *) startAddr + (chunkSize * i);
-    MD5_Update(&ctx, &blockPtr, blockRemaining);
-    
-    unsigned char result[16];
-    // Result
-    MD5_Final(result, &ctx);
-    
-    // Convert to string
-    char md5string[33];
-    for(int i = 0; i < 16; ++i)
-        sprintf(&md5string[i*2], "%02x", (unsigned int)result[i]);
-
-    memcpy(&hash, result, sizeof(result));
-    
-}
-
