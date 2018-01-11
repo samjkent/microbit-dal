@@ -28,6 +28,7 @@ DEALINGS IN THE SOFTWARE.
   * Provides a BLE service to remotely write the user program to the device.
   */
 #include "MicroBitConfig.h"
+#include "MicroBitBLEManager.h"
 #include "ble/UUID.h"
 
 #include "MicroBitPartialFlashingService.h"
@@ -35,20 +36,24 @@ DEALINGS IN THE SOFTWARE.
 // Instance of MBFlash
 MicroBitFlash flash;
 
-uint8_t MicroBitPartialFlashService::writeStatus = 0;  // access static var
-uint8_t *MicroBitPartialFlashService::data = 0;         // access static var
-uint8_t MicroBitPartialFlashService::flashControlCharacteristicBuffer[20];  // access static var
+// Access to static
+uint8_t MicroBitPartialFlashService::writeStatus = 0;
+uint8_t *MicroBitPartialFlashService::data = 0;
+uint8_t MicroBitPartialFlashService::flashControlCharacteristicBuffer[20];
 uint32_t MicroBitPartialFlashService::baseAddress = 0x30000;
+GattAttribute::Handle_t *flashControlCharacteristicHandle;
 
 int packet = 0;
 
-uint32_t packetNum = 0; 
-uint32_t packetCount = 0; 
+uint32_t packetNum = 0;
+uint32_t packetCount = 0;
 uint32_t blockPacketCount = 0;
-    
+
 uint32_t block[16];
 uint8_t  blockNum = 0;
 uint16_t  offset   = 0;
+
+MicroBitBLEManager *bleManager;
 
 /**
   * Constructor.
@@ -69,7 +74,7 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
     //GattCharacteristic  rwPolicyCharacteristic(MicroBitPartialFlashServiceRWPolicyUUID, (uint8_t *) rwPolicyCharacteristicBuffer, 0,
     //sizeof(rwPolicyCharacteristicBuffer), GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_WRITE | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
 
-    // Auth Callbacks 
+    // Auth Callbacks
     mapCharacteristic.setReadAuthorizationCallback(this, &MicroBitPartialFlashService::onDataRead);
     flashCharacteristic.setReadAuthorizationCallback(this, &MicroBitPartialFlashService::onDataRead);
     flashControlCharacteristic.setReadAuthorizationCallback(this, &MicroBitPartialFlashService::onDataRead);
@@ -95,7 +100,7 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
     ble.onDataWritten(this, &MicroBitPartialFlashService::onDataWritten);
 
     // Set up listener for SD writing
-    messageBus.listen(MICROBIT_ID_PFLASH_NOTIFICATION, MICROBIT_EVT_ANY, writeEvent);
+    messageBus.listen(MICROBIT_ID_PFLASH_NOTIFICATION, MICROBIT_EVT_ANY, this, &MicroBitPartialFlashService::writeEvent);
 
     // Set up fast BLE
     Gap::ConnectionParams_t fast;
@@ -113,17 +118,17 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, MicroB
 void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *params)
 {
     data = (uint8_t *)params->data;
-    
+
     if(params->handle == mapCharacteristicHandle && params->len > 0 && params->len < 6)
     {
         /* Data : 0xFF Returns list of Region Names
-                  0x?? Returns Region ?? data   
+                  0x?? Returns Region ?? data
         */
         ROI = data[0];
         packet = 0;
 
         baseAddress = memoryMap.memoryMapStore.memoryMap[ROI].startAddress & 0xFFFF0000; // Offsets are 16 bit
-            
+
     } else if(params->handle == flashCharacteristicHandle && params->len > 0){
 
         // Receive 16 bytes per packet
@@ -131,19 +136,28 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
         // When buffer is full trigger writeEvent
         // When write is complete notify app and repeat
 
+        // If offset = 0x1234 restart current packet
+        if(((data[16] << 8) | data[17]) == 0x1234)
+        {
+          packetCount = ((data[18] << 8) | data[19]);
+          blockNum = 0;
+          return;
+        }
+
         // Check packet count
         packetNum = ((data[18] << 8) | data[19]);
         if(packetNum != ++packetCount)
         {
             flashControlCharacteristicBuffer[0] = 0xAA;
+            ble.gattServer().write(flashControlCharacteristicHandle, (const uint8_t *)flashControlCharacteristicBuffer, sizeof(flashControlCharacteristicBuffer));
             packetCount = blockPacketCount;
         }
 
         // Add to block
         for(int x = 0; x < 4; x++)
             block[(4*blockNum) + x] = data[(4*x)] | data[(4*x)+1] << 8 | data[(4*x)+2] << 16 | data[(4*x)+3] << 24;
-        
-        // If packet num is 0xFFFF end transmission 
+
+        // If packet num is 0xFFFF end transmission
         if(packetNum == 0xFFFF)
             blockNum = 255;
 
@@ -185,7 +199,7 @@ void MicroBitPartialFlashService::onDataWritten(const GattWriteCallbackParams *p
 }
 
 /**
-  * Write Event 
+  * Write Event
   * Used the write data to the flash outside of the BLE ISR
   */
 void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
@@ -206,6 +220,7 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
 
     // Update flash control buffer to send next packet
     flashControlCharacteristicBuffer[0] = 0xFF;
+    ble.gattServer().write(flashControlCharacteristicHandle, (const uint8_t *)flashControlCharacteristicBuffer, sizeof(flashControlCharacteristicBuffer));
 }
 
 
@@ -216,12 +231,12 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
 {
     if(params->handle == mapCharacteristicHandle)
     {
-       if(ROI == 0xFF){ 
+       if(ROI == 0xFF){
             // Returns list of region names
             int j = 0; // Counter
-            for(int i = 0; i < NUMBER_OF_REGIONS; i++) { 
-                mapCharacteristicBuffer[j  ] = memoryMap.memoryMapStore.memoryMap[i].name[0]; 
-                mapCharacteristicBuffer[j+1] = memoryMap.memoryMapStore.memoryMap[i].name[1]; 
+            for(int i = 0; i < NUMBER_OF_REGIONS; i++) {
+                mapCharacteristicBuffer[j  ] = memoryMap.memoryMapStore.memoryMap[i].name[0];
+                mapCharacteristicBuffer[j+1] = memoryMap.memoryMapStore.memoryMap[i].name[1];
                 mapCharacteristicBuffer[j+2] = memoryMap.memoryMapStore.memoryMap[i].name[2];
                 j = j + 3;
             }
@@ -254,10 +269,10 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
 
                 // Increment Packet Count
                 packet = 1;
-        
+
             } else {
                 // Return Hash
-                for(int i = 0; i < 16; ++i)
+                for(int i = 0; i < 8; ++i)
                     mapCharacteristicBuffer[i] = memoryMap.memoryMapStore.memoryMap[ROI].hash[i];
                 mapCharacteristicBuffer[16] = 0;
                 mapCharacteristicBuffer[17] = 0;
@@ -267,11 +282,11 @@ void MicroBitPartialFlashService::onDataRead(GattReadAuthCallbackParams *params)
                 // Set packet count to 0
                 packet = 0;
             }
-           
+
 
             ble.gattServer().write(mapCharacteristicHandle, (const uint8_t *)&mapCharacteristicBuffer, sizeof(mapCharacteristicBuffer));
             }
-    } else 
+    } else
     if(params->handle == flashCharacteristicHandle)
     {   // Writes Region
         ble.gattServer().write(flashCharacteristicHandle, (const uint8_t *)flashCharacteristicBuffer, sizeof(flashCharacteristicBuffer));

@@ -223,7 +223,7 @@ class MicroBitBLEManager : MicroBitComponent
     void stopAdvertising();
 
     /**
-     * A member function used to defer writes to flash, in order to prevent a write collision with 
+     * A member function used to defer writes to flash, in order to prevent a write collision with
      * softdevice.
      * @param handle The handle offered by soft device during pairing.
      * */
@@ -291,17 +291,17 @@ class MicroBitBLEManager : MicroBitComponent
     * @param display The display instance used for displaying the histogram.
 	*/
     void showNameHistogram(MicroBitDisplay &display);
-        
+
 
     /**
     * Displays pairing mode animation
     *
     * @param display The display instance used for displaying the histogram.
     */
-    void showManagementModeAnimation(MicroBitDisplay &display);    
+    void showManagementModeAnimation(MicroBitDisplay &display);
 
     #define MICROBIT_BLE_DISCONNECT_AFTER_PAIRING_DELAY  500
-    unsigned long pairing_completed_at_time;   
+    unsigned long pairing_completed_at_time;
 
     int pairingStatus;
     ManagedString passKey;

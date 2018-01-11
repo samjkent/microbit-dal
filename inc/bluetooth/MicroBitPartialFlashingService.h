@@ -27,6 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define MICROBIT_PARTIAL_FLASH_SERVICE_H
 
 #include "MicroBitConfig.h"
+#include "MicroBitBLEManager.h"
 #include "ble/BLE.h"
 #include "MicroBitMemoryMap.h"
 
@@ -77,13 +78,13 @@ class MicroBitPartialFlashService
     BLEDevice           &ble;
     MicroBitMemoryMap   &memoryMap;
 
-    static uint8_t *data;    
+    static uint8_t *data;
     static uint32_t baseAddress;
 
     EventModel          &messageBus;
 
     // Flash Writing
-    static void writeEvent(MicroBitEvent e);
+    void writeEvent(MicroBitEvent e);
     static uint8_t writeStatus;
     uint8_t writeThreadFlag = 0;
 
