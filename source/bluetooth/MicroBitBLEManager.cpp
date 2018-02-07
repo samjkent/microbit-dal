@@ -292,7 +292,7 @@ void MicroBitBLEManager::deferredSysAttrWrite(Gap::Handle_t handle)
   * bleManager.init(uBit.getName(), uBit.getSerial(), uBit.messageBus, true);
   * @endcode
   */
-void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumber, EventModel &messageBus, MicroBitMemoryMap &mMap, bool enableBonding)
+void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumber, EventModel &messageBus, bool enableBonding)
 {
     ManagedString BLEName("BBC micro:bit");
     this->deviceName = deviceName;
@@ -382,6 +382,7 @@ void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumb
 // Bring up core BLE services.
 #if CONFIG_ENABLED(MICROBIT_BLE_DFU_SERVICE)
     new MicroBitDFUService(*ble);
+    new MicroBitPartialFlashService(*ble, messageBus);
 #endif
 
 
@@ -396,8 +397,6 @@ void MicroBitBLEManager::init(ManagedString deviceName, ManagedString serialNumb
 #else
     (void)messageBus;
 #endif
-
-    new MicroBitPartialFlashService(*ble, mMap, messageBus);
 
     // Configure for high speed mode where possible.
     Gap::ConnectionParams_t fast;
@@ -631,7 +630,6 @@ int MicroBitBLEManager::advertiseEddystoneUid(const char* uid_namespace, const c
  *
  * @param display An instance of MicroBitDisplay used when displaying pairing information.
  * @param authorizationButton The button to use to authorise a pairing request.
- * @param mMap Memory Map to use for partial flashing
  *
  * @code
  * // initiate pairing mode

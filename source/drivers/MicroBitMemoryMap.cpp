@@ -34,11 +34,6 @@ DEALINGS IN THE SOFTWARE.
 #include "MicroBitConfig.h"
 #include "MicroBitMemoryMap.h"
 #include "MicroBitFlash.h"
-#include "md5.h"
-
-uint8_t sdHash[8]  = {0,0,0,0,0,0,0,0};
-uint8_t dalHash[8] = {0,0,0,0,0,0,0,0};
-uint8_t pxtHash[8] = {0,0,0,0,0,0,0,0};
 
 /**
   * Default constructor.
@@ -52,104 +47,30 @@ MicroBitMemoryMap::MicroBitMemoryMap()
     memcpy(&memoryMapStore, flashBlockPointer, sizeof(memoryMapStore));
 
     //if we haven't used flash before, we need to configure it
-    if(memoryMapStore.magic != MICROBIT_MEMORY_MAP_MAGIC || 1 == 1)
+    // Rebuild map everytime
+    if(memoryMapStore.magic != MICROBIT_MEMORY_MAP_MAGIC || 1)
     {
-        // Add known details
-        // Set Names to Empty rather than garbage so PushRegion works
-        for(int i = 0; i < NUMBER_OF_REGIONS; i++) {
-            memoryMapStore.memoryMap[i].name[0] = ' ';
-            memoryMapStore.memoryMap[i].name[1] = ' ';
-            memoryMapStore.memoryMap[i].name[2] = ' ';
-        }
+
+        // SD
+        pushRegion(Region(0x00, 0x00, 0x18000, 0x00));  // Soft Device
+
+        // DAL
+        pushRegion(Region(0x01, 0x18000, FLASH_PROGRAM_END, 0x00)); // micro:bit Device Abstractation Layer
+
+        // PXT
+        pushRegion(Region(0x02, FLASH_PROGRAM_END, 0x3e800, 0x00)); // micro:bit PXT
 
         // Find Hashes if PXT Built Program
         findHashes();
-        /*
-         * uint32_t volatile *magicAddress  = (uint32_t *)0x00;
-        for(int x = 0; x < 256; x++){
-            magicAddress = (uint32_t volatile *)(magicAddress + 0x100);
-        }*/
-        
-        // SD
-        char sdName[4] = "SD ";
-        pushRegion(Region(0x00, 0x18000, sdName, sdHash, USB));  // Soft Device
-        
-        // DAL
-        char dalName[4] = "DAL";
-        pushRegion(Region(0x18000, FLASH_PROGRAM_END, dalName, dalHash, USB)); // micro:bit Device Abstractation Layer
-        
-        // PXT
-        char pxtName[4] = "PXT";
-        pushRegion(Region(FLASH_PROGRAM_END, 0x3e800, pxtName, pxtHash, PartialFlash)); // micro:bit PXT
-        
-    
+
+        // Update Magic
         memoryMapStore.magic = MICROBIT_MEMORY_MAP_MAGIC;
-     
-       
-        //erase the scratch page and write our new MemoryMapStore
-        flashPageErase((uint32_t *)(pg_size * (NRF_FICR->CODESIZE - MICROBIT_MEMORY_MAP_SCRATCH_PAGE_OFFSET)));
-        scratchMemoryMapStore(memoryMapStore);
-        
-        //erase flash, and copy the scratch page over
-        flashPageErase((uint32_t *)flashBlockPointer);
-        flashCopy((uint32_t *)(pg_size * (NRF_FICR->CODESIZE - MICROBIT_MEMORY_MAP_SCRATCH_PAGE_OFFSET)), flashBlockPointer, pg_size/4);
-       
+
+        // Update Flash
+        // updateFlash(&memoryMapStore);
+
     }
 
-}
-
-/**
-  * Method for erasing a page in flash.
-  *
-  * @param page_address Address of the first word in the page to be erased.
-  */  
-void MicroBitMemoryMap::flashPageErase(uint32_t * page_address)
-{
-    MicroBitFlash flash;
-    flash.erase_page(page_address);
-}
-
-/**
-  * Function for copying words from one location to another.
-  *
-  * @param from the address to copy data from.
-  *
-  * @param to the address to copy the data to.
-  *
-  * @param sizeInWords the number of words to copy
-  */
-void MicroBitMemoryMap::flashCopy(uint32_t* from, uint32_t* to, int sizeInWords)
-{
-    MicroBitFlash flash;
-    flash.flash_burn(to, from, sizeInWords);
-}
-
-/**
-  * Method for writing a word of data in flash with a value.
-  *
-  * @param address Address of the word to change.
-  *
-  * @param value Value to be written to flash.
-  */
-void MicroBitMemoryMap::flashWordWrite(uint32_t * address, uint32_t value)
-{
-    flashCopy(&value, address, 1);
-}
-
-/**
-  * Function for populating the scratch page with a MemoryMapStore
-  *
-  * @param store the MemoryMapStore struct to write to the scratch page.
-  */
-void MicroBitMemoryMap::scratchMemoryMapStore(MemoryMapStore store)
-{
-    //calculate our various offsets
-    uint32_t *s = (uint32_t *) &store;
-    uint32_t pg_size = NRF_FICR->CODEPAGESIZE;
-    uint32_t *scratchPointer = (uint32_t *)(pg_size * (NRF_FICR->CODESIZE - MICROBIT_MEMORY_MAP_SCRATCH_PAGE_OFFSET));
-    int wordsToWrite = sizeof(MemoryMapStore) / 4;
-
-    flashCopy(s, scratchPointer, wordsToWrite);
 }
 
 /**
@@ -164,16 +85,15 @@ int MicroBitMemoryMap::pushRegion(Region region)
 {
 
     // Find next blank Region in map
-    int i = 0;
-    while(memoryMapStore.memoryMap[i].name[0] != ' '  && i < NUMBER_OF_REGIONS) i++;
-    
-    if(i == NUMBER_OF_REGIONS){
+    if(regionCount == NUMBER_OF_REGIONS){
         return MICROBIT_NO_DATA;
     } else {
-        // Add data 
-        memoryMapStore.memoryMap[i] = region;
-    
-
+        // Add data
+        memoryMapStore.memoryMap[regionCount].startAddress = region.startAddress;
+        memoryMapStore.memoryMap[regionCount].endAddress   = region.endAddress;
+        memcpy(&memoryMapStore.memoryMap[regionCount].hash, &region.hash, 8);
+        memoryMapStore.memoryMap[regionCount].regionId     = region.regionId;
+        regionCount++;
         return MICROBIT_OK;
     }
 }
@@ -182,40 +102,39 @@ int MicroBitMemoryMap::pushRegion(Region region)
   * Function for updating a Region of the MemoryMap
   *
   * @param region The Region to update in the MemoryMap. The name is used as the selector.
-  * 
+  *
   * @return MICROBIT_OK success, MICROBIT_NO_DATA if the region is not found
   */
 int MicroBitMemoryMap::updateRegion(Region region)
 {
-
     // Find Region name in map
     int i = 0;
-    while(memoryMapStore.memoryMap[i].name != region.name && i < NUMBER_OF_REGIONS) i++;
+    while(memoryMapStore.memoryMap[i].regionId != region.regionId && i < NUMBER_OF_REGIONS) i++;
 
     if(i == NUMBER_OF_REGIONS){
         return MICROBIT_NO_DATA;
     } else {
-        // Add data 
+        // Add data
         memoryMapStore.memoryMap[i] = region;
-        updateFlash(memoryMapStore);
+        updateFlash(&memoryMapStore);
         return MICROBIT_OK;
     }
 }
-   
+
 /**
   * Function to update the flash with the current MemoryMapStore
   *
   * @param memoryMapStore The memory map to write to flash
   */
-void MicroBitMemoryMap::updateFlash(MemoryMapStore store)
-{ 
-    //erase the scratch page and write our new MemoryMapStore
-    flashPageErase((uint32_t *)(pg_size * (NRF_FICR->CODESIZE - MICROBIT_MEMORY_MAP_SCRATCH_PAGE_OFFSET)));
-    scratchMemoryMapStore(store);
+void MicroBitMemoryMap::updateFlash(MemoryMapStore *store)
+{
+  //calculate our various offsets
+  uint32_t pg_size = NRF_FICR->CODEPAGESIZE;
+  uint32_t *flashPointer = (uint32_t *)(pg_size * (NRF_FICR->CODESIZE - MICROBIT_MEMORY_MAP_PAGE_OFFSET));
+  int wordsToWrite = sizeof(MemoryMapStore) / 4;
 
-    //erase flash, and copy the scratch page over
-    flashPageErase((uint32_t *)flashBlockPointer);
-    flashCopy((uint32_t *)(pg_size * (NRF_FICR->CODESIZE - MICROBIT_MEMORY_MAP_SCRATCH_PAGE_OFFSET)), flashBlockPointer, pg_size/4);
+  MicroBitFlash flash;
+  flash.flash_write(store, flashPointer, wordsToWrite);
 }
 
 /*
@@ -230,10 +149,10 @@ void MicroBitMemoryMap::findHashes()
 
         uint32_t volatile *magicAddress  = (uint32_t *)(0x400 * x);
         uint32_t magicValue = *magicAddress;
-        
+
         // Check for first 32 bits of Magic
-        if(magicValue == 0x923b8e70) 
-        {   
+        if(magicValue == 0x923b8e70)
+        {
             // Check remaining magic
             if(
                *(uint32_t *)(magicAddress + 0x1) == 0x41A815C6 &&
@@ -244,36 +163,32 @@ void MicroBitMemoryMap::findHashes()
                 // If the magic has been found use the hashes follow
                 magicAddress = (uint32_t *)(magicAddress + 0x4);
 
-                dalHash[0] = (*magicAddress & 0xFF);
-                dalHash[1] = (*magicAddress & 0xFF00)     >>  8;
-                dalHash[2] = (*magicAddress & 0xFF0000)   >> 16;
-                dalHash[3] = (*magicAddress & 0xFF000000) >> 24;
+                memoryMapStore.memoryMap[1].hash[0] = (*magicAddress & 0xFF);
+                memoryMapStore.memoryMap[1].hash[1] = (*magicAddress & 0xFF00)     >>  8;
+                memoryMapStore.memoryMap[1].hash[2] = (*magicAddress & 0xFF0000)   >> 16;
+                memoryMapStore.memoryMap[1].hash[3] = (*magicAddress & 0xFF000000) >> 24;
 
                 magicAddress = (uint32_t *)(magicAddress + 0x1);
-                
-                dalHash[4] = (*magicAddress & 0xFF);
-                dalHash[5] = (*magicAddress & 0xFF00)     >>  8;
-                dalHash[6] = (*magicAddress & 0xFF0000)   >> 16;
-                dalHash[7] = (*magicAddress & 0xFF000000) >> 24;
-                
-                magicAddress = (uint32_t *)(magicAddress + 0x1);
 
-                pxtHash[0] = (*magicAddress & 0xFF);
-                pxtHash[1] = (*magicAddress & 0xFF00)     >>  8;
-                pxtHash[2] = (*magicAddress & 0xFF0000)   >> 16;
-                pxtHash[3] = (*magicAddress & 0xFF000000) >> 24;
+                memoryMapStore.memoryMap[1].hash[4] = (*magicAddress & 0xFF);
+                memoryMapStore.memoryMap[1].hash[5] = (*magicAddress & 0xFF00)     >>  8;
+                memoryMapStore.memoryMap[1].hash[6] = (*magicAddress & 0xFF0000)   >> 16;
+                memoryMapStore.memoryMap[1].hash[7] = (*magicAddress & 0xFF000000) >> 24;
 
                 magicAddress = (uint32_t *)(magicAddress + 0x1);
-                
-                pxtHash[4] = (*magicAddress & 0xFF);
-                pxtHash[5] = (*magicAddress & 0xFF00)     >>  8;
-                pxtHash[6] = (*magicAddress & 0xFF0000)   >> 16;
-                pxtHash[7] = (*magicAddress & 0xFF000000) >> 24;
-                
-                // SD HASH 0 = FF to indicated change
-                sdHash[0] = 0xFF;
 
-                // Return true
+                memoryMapStore.memoryMap[2].hash[0] = (*magicAddress & 0xFF);
+                memoryMapStore.memoryMap[2].hash[1] = (*magicAddress & 0xFF00)     >>  8;
+                memoryMapStore.memoryMap[2].hash[2] = (*magicAddress & 0xFF0000)   >> 16;
+                memoryMapStore.memoryMap[2].hash[3] = (*magicAddress & 0xFF000000) >> 24;
+
+                magicAddress = (uint32_t *)(magicAddress + 0x1);
+
+                memoryMapStore.memoryMap[2].hash[4] = (*magicAddress & 0xFF);
+                memoryMapStore.memoryMap[2].hash[5] = (*magicAddress & 0xFF00)     >>  8;
+                memoryMapStore.memoryMap[2].hash[6] = (*magicAddress & 0xFF0000)   >> 16;
+                memoryMapStore.memoryMap[2].hash[7] = (*magicAddress & 0xFF000000) >> 24;
+
                 return;
 
             }

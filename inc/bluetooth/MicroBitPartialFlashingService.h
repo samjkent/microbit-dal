@@ -40,10 +40,7 @@ DEALINGS IN THE SOFTWARE.
 
 // UUIDs for our service and characteristics
 extern const uint8_t  MicroBitPartialFlashServiceUUID[];
-extern const uint8_t  MicroBitPartialFlashServiceMapUUID[];
-extern const uint8_t  MicroBitPartialFlashServiceFlashUUID[];
-extern const uint8_t  MicroBitPartialFlashServiceFlashControlUUID[];
-
+extern const uint8_t  MicroBitPartialFlashServiceCharacteristicUUID[];
 
 /**
   * Class definition for the custom MicroBit Partial Flash Service.
@@ -52,6 +49,7 @@ extern const uint8_t  MicroBitPartialFlashServiceFlashControlUUID[];
 class MicroBitPartialFlashService
 {
     public:
+    MicroBitMemoryMap   memoryMap;
 
     /**
       * Constructor.
@@ -59,7 +57,7 @@ class MicroBitPartialFlashService
       * @param _ble The instance of a BLE device that we're running on.
       * @param _memoryMap An instance of MicroBiteMemoryMap to interface with.
       */
-    MicroBitPartialFlashService(BLEDevice &_ble, MicroBitMemoryMap &_memoryMap, EventModel &_messageBus);
+    MicroBitPartialFlashService(BLEDevice &_ble, EventModel &_messageBus);
 
     /**
       * Callback. Invoked when any of our attributes are written via BLE.
@@ -72,37 +70,29 @@ class MicroBitPartialFlashService
     void onDataRead(GattReadAuthCallbackParams *params);
 
     private:
-
-
     // Bluetooth stack we're running on.
     BLEDevice           &ble;
-    MicroBitMemoryMap   &memoryMap;
-
-    static uint8_t *data;
-    static uint32_t baseAddress;
-
     EventModel          &messageBus;
+
+    // Region info
+    void sendRegionInfoNotification(MicroBitEvent e);
 
     // Flash Writing
     void writeEvent(MicroBitEvent e);
-    static uint8_t writeStatus;
+    uint8_t writeStatus;
     uint8_t writeThreadFlag = 0;
 
-    // memory for our control characteristics.
-    uint8_t            mapCharacteristicBuffer[20];
-    uint8_t            flashCharacteristicBuffer[20];
-    static uint8_t            flashControlCharacteristicBuffer[20];
+    uint8_t *data;
+    uint32_t baseAddress;
 
+    // memory for our control characteristics.
     uint8_t             ROI = 0xFF;
 
     // Handles to access each characteristic when they are held by Soft Device.
-    GattAttribute::Handle_t mapCharacteristicHandle;
-    GattAttribute::Handle_t flashCharacteristicHandle;
-    GattAttribute::Handle_t flashControlCharacteristicHandle;
+    GattAttribute::Handle_t partialFlashCharacteristicHandle;
 
-    GattCharacteristic mapCharacteristic;
-    GattCharacteristic flashCharacteristic;
-    GattCharacteristic flashControlCharacteristic;
+    // Flashing function
+    void flashData(uint8_t *data);
 
 };
 

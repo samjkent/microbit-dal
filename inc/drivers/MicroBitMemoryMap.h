@@ -30,106 +30,64 @@ DEALINGS IN THE SOFTWARE.
 #include "MicroBitConfig.h"
 #include "ManagedString.h"
 #include "ErrorNo.h"
-#include "md5.h"
 
 #define MICROBIT_MEMORY_MAP_MAGIC       0xCA6E
+#define MICROBIT_MEMORY_MAP_PAGE_OFFSET 21
 
-#define MICROBIT_MEMORY_MAP_PAGE_OFFSET            21 
-#define MICROBIT_MEMORY_MAP_SCRATCH_PAGE_OFFSET    19      //Use the page just below the BLE Bond Data.
-
-#define NUMBER_OF_REGIONS 5
-
-enum RWPolicy { EMPTY, PartialFlash, FullFlash, USB };
-
-struct Region 
-{
-    uint32_t startAddress;
-    uint32_t endAddress;
-    char name[3];
-    uint8_t hash[8];
-    RWPolicy rwPolicy;
-
-    Region(uint32_t startAddress, uint32_t endAddress, char name[4], uint8_t hash[8], RWPolicy rwPolicy)
-    {
-        this->startAddress = startAddress;
-        this->endAddress = endAddress;
-        strcpy( this->name, name );
-        memcpy( this->hash, hash, 8 );
-        this->rwPolicy = rwPolicy;
-    }
-
-    Region()
-    {
-        this->startAddress = 0;
-        this->endAddress = 0;
-        strcpy( this->name, "" );
-        memcpy( this->hash, "", 8 );
-        this->rwPolicy = EMPTY;
-    }
-
-};
-
-struct MemoryMapStore
-{
-    uint32_t magic;
-    Region memoryMap[NUMBER_OF_REGIONS];           
-};
-
+#define NUMBER_OF_REGIONS 3
 
 /**
   * Class definition for the MicroBitMemoryMap class.
   * This allows reading and writing of regions within the memory map.
-  * 
-  * This class maps the different regions used on the flash memory to allow 
+  *
+  * This class maps the different regions used on the flash memory to allow
   * a region to updated independently of the others AKA Partial Flashing.
   */
 class MicroBitMemoryMap
 {
-uint32_t pg_size = NRF_FICR->CODEPAGESIZE;
-uint32_t pg_num  = NRF_FICR->CODESIZE - MICROBIT_MEMORY_MAP_PAGE_OFFSET;
-uint32_t *flashBlockPointer = (uint32_t *)(pg_size * pg_num);
+    struct Region
+    {
+        uint8_t  regionId;
+        uint32_t startAddress;
+        uint32_t endAddress;
+        uint8_t  hash[8];
 
-    /**
-    * Method for erasing a page in flash.
-    *
-    * @param page_address Address of the first word in the page to be erased.
-    */
-    void flashPageErase(uint32_t * page_address);
+        Region(uint8_t regionId, uint32_t startAddress, uint32_t endAddress, uint8_t hash[8])
+        {
+            this->regionId = regionId;
+            this->startAddress = startAddress;
+            this->endAddress = endAddress;
+            memcpy( this->hash, &hash, sizeof(hash) );
+        }
 
-    /**
-      * Method for writing a word of data in flash with a value.
-      *
-      * @param address Address of the word to change.
-      *
-      * @param value Value to be written to flash.
-      */
-    void flashWordWrite(uint32_t * address, uint32_t value);
+        Region(){
+          this->regionId = 0x0;
+          this->startAddress = 0x0;
+          this->endAddress = 0x0;
+          memset( this->hash, 0x0, 8 );
+        }
 
-    /**
-      * Function for copying words from one location to another.
-      *
-      * @param from the address to copy data from.
-      *
-      * @param to the address to copy the data to.
-      *
-      * @param sizeInWords the number of words to copy
-      */
-    void flashCopy(uint32_t* from, uint32_t* to, int sizeInWords);
+    };
 
-    /**
-    * Function for populating the scratch page with a MemoryMapStore
-    *
-    * @param store the MemoryMapStore struct to write to the scratch page.
-    */
-    void scratchMemoryMapStore(MemoryMapStore store);
+    struct MemoryMapStore
+    {
+        uint32_t magic;
+        Region memoryMap[3];
+    };
+
+    uint32_t pg_size = NRF_FICR->CODEPAGESIZE;
+    uint32_t pg_num  = NRF_FICR->CODESIZE - MICROBIT_MEMORY_MAP_PAGE_OFFSET;
+    uint32_t *flashBlockPointer = (uint32_t *)(pg_size * pg_num);
+
+    uint8_t regionCount = 0;
 
     /**
     * Function to update the flash with the current MemoryMapStore
     *
     * @param memoryMapStore The memory map to write to flash
     */
-    void updateFlash(MemoryMapStore store);
-    
+    void updateFlash(MemoryMapStore *store);
+
     public:
 
     MemoryMapStore memoryMapStore;
@@ -150,7 +108,7 @@ uint32_t *flashBlockPointer = (uint32_t *)(pg_size * pg_num);
      *
      */
     int pushRegion(Region region);
-    
+
     /**
       * Function for updating a Region of the MemoryMap
       *
