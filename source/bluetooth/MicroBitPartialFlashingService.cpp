@@ -42,7 +42,7 @@ uint32_t baseAddress = 0x30000;
 
 int packet = 0;
 
-uint32_t packetNum = 0;
+uint8_t packetNum = 0;
 uint32_t packetCount = 0;
 uint32_t blockPacketCount = 0;
 
@@ -76,8 +76,6 @@ MicroBitPartialFlashService::MicroBitPartialFlashService(BLEDevice &_ble, EventM
 
     // Set up listener for SD writing
     messageBus.listen(MICROBIT_ID_PFLASH_NOTIFICATION, MICROBIT_EVT_ANY, this, &MicroBitPartialFlashService::writeEvent);
-    // Listener for region reply
-    messageBus.listen(MICROBIT_ID_PFLASH_REGION, MICROBIT_EVT_ANY, this, &MicroBitPartialFlashService::sendRegionInfoNotification);
 
 }
 
@@ -139,9 +137,14 @@ void MicroBitPartialFlashService::flashData(uint8_t *data)
         // Buffer 8 packets - 32 uint32_t // 128 bytes per block
         // When buffer is full trigger writeEvent
         // When write is complete notify app and repeat
+        // +-----------+----------+---------+---------+
+        // | 1 Byte    | 16 Bytes | 2 Bytes | 1 Byte  |
+        // +-----------+----------+---------+---------+
+        // | COMMAND   | DATA     | OFFSET  | PACKET# |
+        // +-----------+----------+---------+---------+
 
         // If offset = 0x1234 restart current packet
-        if(((data[16] << 8) | data[17]) == 0x1234)
+        if(((data[17] << 8) | data[18]) == 0x1234)
         {
           packetCount = ((data[18] << 8) | data[19]);
           blockNum = 0;
@@ -149,17 +152,17 @@ void MicroBitPartialFlashService::flashData(uint8_t *data)
         }
 
         // Check packet count
-        packetNum = ((data[18] << 8) | data[19]);
+        packetNum = data[19];
         if(packetNum != ++packetCount)
         {
             uint8_t flashNotificationBuffer[] = {FLASH_DATA, 0xAA};
-            ble.gattServer().write(partialFlashCharacteristicHandle, (const uint8_t *)flashNotificationBuffer, sizeof(flashNotificationBuffer));
+            ble.gattServer().notify(partialFlashCharacteristicHandle, (const uint8_t *)flashNotificationBuffer, sizeof(flashNotificationBuffer));
             packetCount = blockPacketCount;
         }
 
         // Add to block
         for(int x = 0; x < 4; x++)
-            block[(4*blockNum) + x] = data[(4*x)] | data[(4*x)+1] << 8 | data[(4*x)+2] << 16 | data[(4*x)+3] << 24;
+            block[(4*blockNum) + x] = data[(4*x) + 1] | data[(4*x) + 2] << 8 | data[(4*x) + 3] << 16 | data[(4*x) + 4] << 24;
 
         // If packet num is 0xFFFF end transmission
         if(packetNum == 0xFFFF)
@@ -170,7 +173,7 @@ void MicroBitPartialFlashService::flashData(uint8_t *data)
             // blockNum is 0, set up offset
             case 0:
                 {
-                    offset = ((data[16] << 8) | data[17]);
+                    offset = ((data[17] << 8) | data[18]);
                     blockPacketCount = packetNum;
                     blockNum++;
                     break;
@@ -220,22 +223,8 @@ void MicroBitPartialFlashService::writeEvent(MicroBitEvent e)
 
     // Update flash control buffer to send next packet
     uint8_t flashNotificationBuffer[] = {FLASH_DATA, 0xFF};
-    ble.gattServer().write(partialFlashCharacteristicHandle, (const uint8_t *)flashNotificationBuffer, sizeof(flashNotificationBuffer));
+    ble.gattServer().notify(partialFlashCharacteristicHandle, (const uint8_t *)flashNotificationBuffer, sizeof(flashNotificationBuffer));
 }
-
-/**
-  * Send Region info
-  * Return Region info to client as a BLE notification
-  */
-void MicroBitPartialFlashService::sendRegionInfoNotification(MicroBitEvent e)
-{
-  uint8_t regionID = e.value;
-  // Return info about Region[data[1]]
-  // Return Region Start / End
-
-}
-
-
 
 const uint8_t  MicroBitPartialFlashServiceUUID[] = {
     0xe9,0x7d,0xd9,0x1d,0x25,0x1d,0x47,0x0a,0xa0,0x62,0xfa,0x19,0x22,0xdf,0xa9,0xa8

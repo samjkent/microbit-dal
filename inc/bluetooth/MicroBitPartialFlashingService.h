@@ -74,9 +74,6 @@ class MicroBitPartialFlashService
     BLEDevice           &ble;
     EventModel          &messageBus;
 
-    // Region info
-    void sendRegionInfoNotification(MicroBitEvent e);
-
     // Flash Writing
     void writeEvent(MicroBitEvent e);
     uint8_t writeStatus;
