@@ -49,6 +49,7 @@ extern const uint8_t  MicroBitPartialFlashServiceCharacteristicUUID[];
 class MicroBitPartialFlashService
 {
     public:
+    // Create MemoryMap to store SD/DAL/PXT region info
     MicroBitMemoryMap   memoryMap;
 
     /**
@@ -70,25 +71,27 @@ class MicroBitPartialFlashService
     void onDataRead(GattReadAuthCallbackParams *params);
 
     private:
-    // Bluetooth stack we're running on.
+    // M:B Bluetooth stack and MessageBus
     BLEDevice           &ble;
     EventModel          &messageBus;
 
-    // Flash Writing
+    /**
+      * Writing to flash inside MicroBitEvent rather than in the ISR
+      */
     void writeEvent(MicroBitEvent e);
-    uint8_t writeStatus;
-    uint8_t writeThreadFlag = 0;
 
+    // Hold incoming flash data
     uint8_t *data;
-    uint32_t baseAddress;
 
-    // memory for our control characteristics.
-    uint8_t             ROI = 0xFF;
+    // The base address to write to. Bit masked:  0xFFFF0000 & region.endAddress
+    uint32_t baseAddress = 0x30000;
 
     // Handles to access each characteristic when they are held by Soft Device.
     GattAttribute::Handle_t partialFlashCharacteristicHandle;
 
-    // Flashing function
+    /**
+      * Process a Partial Flashing data packet
+      */
     void flashData(uint8_t *data);
 
 };
